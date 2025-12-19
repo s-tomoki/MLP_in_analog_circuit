@@ -23,7 +23,7 @@
 %	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
 %----------------------------------------------------------------------------------------
 
-\documentclass[11pt,fleqn]{book} % Default font size and left-justified equations
+\documentclass[11pt,fleqn,book]{jlreq} % Default font size and left-justified equations
 
 \usepackage[top=3cm,bottom=3cm,left=3.2cm,right=3.2cm,headsep=10pt,letterpaper]{geometry} % Page margins
 
@@ -45,6 +45,13 @@
 \defbibheading{bibempty}{}
 
 \input{structure} % Insert the commands.tex file which contains the majority of the structure behind the template
+
+% chapter を数字のみ "1. "
+% \renewcommand\jlreqHeadingLabel{\thechapter} 
+% \renewcommand{\thechapter}{\arabic{chapter}.}
+\jlreqsetup{chaptertitleformat=\thechapter} % 章番号のみ表示（「第」「章」なし）
+% \jlreqsetup{chapter={after-label-text={}}}
+
 
 \begin{document}
 \title{Clustering the interstellar medium}
@@ -96,6 +103,14 @@
 %\cleardoublepage % Forces the first chapter to start on an odd page so it's on the right
 
 \pagestyle{fancy} % Print headers again
+
+%----------------------------------------------------------------------------------------
+%	CHAPTERS (WIP)
+%----------------------------------------------------------------------------------------
+
+\chapter{ニューラルネットワークによる機械学習}
+
+\section{機械学習とは}
 
 %----------------------------------------------------------------------------------------
 %	CHAPTER 1
