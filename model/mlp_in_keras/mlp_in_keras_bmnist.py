@@ -9,6 +9,7 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.regularizers import l2
 import matplotlib.pyplot as plt
 
 
@@ -34,7 +35,7 @@ def average_pool_4x4(image):
     pooled_image = image.reshape(7, 4, 7, 4).mean(axis=(1,3))
     return pooled_image
 
-def learning(X_train, X_test, Y_train, Y_test, layers=(8,2,), epochs=100, batch_size=250, dirname='model_analysis'):
+def learning(X_train, X_test, Y_train, Y_test, num_classes = 10, layers=(8,2,), epochs=100, batch_size=250, dirname='model_analysis'):
     # Convert into greyscale
     X_train = X_train.astype('float32')
     X_test = X_test.astype('float32')
@@ -51,9 +52,9 @@ def learning(X_train, X_test, Y_train, Y_test, layers=(8,2,), epochs=100, batch_
 
     # Create the model
     model = Sequential()
-    model.add(Dense(layers[0], input_shape=input_shape, activation='relu'))
+    model.add(Dense(layers[0], input_shape=input_shape, activation='relu', kernel_regularizer=l2(0.01),bias_regularizer=l2(0.01)))
     for i in range(1, len(layers)):
-        model.add(Dense(layers[i], activation='relu'))
+        model.add(Dense(layers[i], activation='relu', kernel_regularizer=l2(0.01),bias_regularizer=l2(0.01)))
     model.add(Dense(num_classes, activation='softmax'))
 
     # Configure the model and start training
@@ -153,14 +154,24 @@ print(f'Original Y_train shape: {Y_train.shape}')
 
 X_train_pooled = np.array([average_pool_4x4(image) for image in X_train]).reshape(X_train.shape[0], feature_vector_length)
 X_test_pooled = np.array([average_pool_4x4(image) for image in X_test]).reshape(X_test.shape[0], feature_vector_length)
-visualize_dataset(X_train_pooled, Y_train, dirname='visualizations_pooled')
+# visualize_dataset(X_train_pooled, Y_train, dirname='visualizations_pooled')
 # learning(X_train_pooled, X_test_pooled, Y_train, Y_test, dirname='model_analysis_pooled')
+
+X_train_pooled_bin = ((X_train_pooled > 127)*255).astype(np.uint8)
+X_test_pooled_bin = ((X_test_pooled > 127)*255).astype(np.uint8)
+visualize_dataset(X_train_pooled_bin, Y_train, dirname='visualizations_pooled_bin')
+learning(X_train_pooled_bin, X_test_pooled_bin, Y_train, Y_test, dirname='model_analysis_pooled_bin')
 
 mask_train_01 = np.isin(Y_train, [0,1])
 mask_test_01 = np.isin(Y_test, [0,1])
-X_train_pooled_01 = X_train[mask_train_01]
+print(f'Number of training samples for digits 0 and 1: {np.sum(mask_train_01)}')
+print(f'Number of test samples for digits 0 and 1: {np.sum(mask_test_01)}')
+X_train_pooled_01 = X_train_pooled[mask_train_01]
 Y_train_pooled_01 = Y_train[mask_train_01]
-X_test_01 = X_test[mask_test_01]
+X_test_01 = X_test_pooled[mask_test_01]
 Y_test_01 = Y_test[mask_test_01]
-learning(X_train_pooled_01, X_test_01, Y_train_pooled_01, Y_test_01, dirname='model_analysis_pooled_01')
+learning(X_train_pooled_01, X_test_01, Y_train_pooled_01, Y_test_01, num_classes=2, layers=(2,),dirname='model_analysis_pooled_01')
 
+X_train_pooled_bin_01 = X_train_pooled_bin[mask_train_01]
+X_test_bin_01 = X_test_pooled_bin[mask_test_01]
+learning(X_train_pooled_bin_01, X_test_bin_01, Y_train_pooled_01, Y_test_01, num_classes=2, layers=(2,),dirname='model_analysis_pooled_bin_01')
