@@ -7,11 +7,12 @@ from PIL import Image
 import numpy as np
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.regularizers import l2
 import matplotlib.pyplot as plt
 
+import converter
 
 def visualize_dataset(X, Y, dirname='visualizations'):
 # Create output directory for visualizations
@@ -30,12 +31,8 @@ def visualize_dataset(X, Y, dirname='visualizations'):
     print(f'Visualizations saved to {dirname}/ directory')
     return None
 
-
-def average_pool_4x4(image):
-    pooled_image = image.reshape(7, 4, 7, 4).mean(axis=(1,3))
-    return pooled_image
-
 def learning(X_train, X_test, Y_train, Y_test, num_classes = 10, layers=(8,2,), epochs=100, batch_size=250, dirname='model_analysis'):
+    input_shape = (49,)
     # Convert into greyscale
     X_train = X_train.astype('float32')
     X_test = X_test.astype('float32')
@@ -46,13 +43,10 @@ def learning(X_train, X_test, Y_train, Y_test, num_classes = 10, layers=(8,2,), 
     Y_train = to_categorical(Y_train, num_classes)
     Y_test = to_categorical(Y_test, num_classes)
 
-    # Set the input shape
-    input_shape = (feature_vector_length,)
-    print(f'Feature shape: {input_shape}')
-
     # Create the model
     model = Sequential()
-    model.add(Dense(layers[0], input_shape=input_shape, activation='relu', kernel_regularizer=l2(0.01),bias_regularizer=l2(0.01)))
+    model.add(Input(shape=input_shape))
+    model.add(Dense(layers[0], activation='relu', kernel_regularizer=l2(0.01),bias_regularizer=l2(0.01)))
     for i in range(1, len(layers)):
         model.add(Dense(layers[i], activation='relu', kernel_regularizer=l2(0.01),bias_regularizer=l2(0.01)))
     model.add(Dense(num_classes, activation='softmax'))
@@ -121,57 +115,54 @@ def save_training_history(model, history, dirname='model_analysis'):
     model.summary()
     with open(f'{dirname}/model_summary.txt', 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
-
-    # Visualize weights of first layer
-    # weights_l1 = model.layers[0].get_weights()[0]
-    # fig, axes = plt.subplots(4, 2, figsize=(10, 10))
-    # for i, ax in enumerate(axes.flat):
-    #     ax.imshow(weights_l1[:, i].reshape(7, 7), cmap='gray')
-    #     ax.set_title(f'Neuron {i}')
-    #     ax.axis('off')
-    # plt.tight_layout()
-    # plt.savefig(f'{dirname}/layer1_weights.png', dpi=150)
-    # plt.close()
-
     save_model_weights(model, dirname=dirname)
-    
     print(f'Model analysis saved to {dirname}/ directory')
     return None
 
-# Configuration options
-feature_vector_length = 49
-num_classes = 10
 
-# Load the data
-(X_train, Y_train), (X_test, Y_test) = mnist.load_data()
-print(f'Original X_train shape: {X_train.shape}')
-print(f'Original Y_train shape: {Y_train.shape}')
 
-# X_train_sampled = X_train[:, ::4, ::4].reshape(X_train.shape[0], feature_vector_length)
-# X_test_sampled = X_test[:, ::4, ::4].reshape(X_test.shape[0], feature_vector_length)
-# visualize_dataset(X_train_sampled, Y_train, dirname='visualizations_sampled')
-# learning(X_train_sampled, X_test_sampled, Y_train, Y_test, dirname='model_analysis_sampled')
+def main():
+    # Configuration options
+    feature_vector_length = 49
+    num_classes = 10
 
-X_train_pooled = np.array([average_pool_4x4(image) for image in X_train]).reshape(X_train.shape[0], feature_vector_length)
-X_test_pooled = np.array([average_pool_4x4(image) for image in X_test]).reshape(X_test.shape[0], feature_vector_length)
-# visualize_dataset(X_train_pooled, Y_train, dirname='visualizations_pooled')
-# learning(X_train_pooled, X_test_pooled, Y_train, Y_test, dirname='model_analysis_pooled')
+    # Load the data
+    cvt = converter.Converter()
+    (X_train, Y_train), (X_test, Y_test) = mnist.load_data()
+    print(f'Original X_train shape: {X_train.shape}')
+    print(f'Original Y_train shape: {Y_train.shape}')
 
-X_train_pooled_bin = ((X_train_pooled > 127)*255).astype(np.uint8)
-X_test_pooled_bin = ((X_test_pooled > 127)*255).astype(np.uint8)
-visualize_dataset(X_train_pooled_bin, Y_train, dirname='visualizations_pooled_bin')
-learning(X_train_pooled_bin, X_test_pooled_bin, Y_train, Y_test, dirname='model_analysis_pooled_bin')
+    # Case 1: 
+    #   Input: Pooling 4x4 (7x7 images, grayscale)
+    #   Category: 10 classes (0-9)
+    #   Layers: (10, 8, 2)
+    (X_train_pooled, X_test_pooled) = cvt.pooling_4x4(X_train, X_test)
+    visualize_dataset(X_train_pooled, Y_train, dirname='visualizations_pooled')
+    learning(X_train_pooled, X_test_pooled, Y_train, Y_test, dirname='model_analysis_pooled')
 
-mask_train_01 = np.isin(Y_train, [0,1])
-mask_test_01 = np.isin(Y_test, [0,1])
-print(f'Number of training samples for digits 0 and 1: {np.sum(mask_train_01)}')
-print(f'Number of test samples for digits 0 and 1: {np.sum(mask_test_01)}')
-X_train_pooled_01 = X_train_pooled[mask_train_01]
-Y_train_pooled_01 = Y_train[mask_train_01]
-X_test_01 = X_test_pooled[mask_test_01]
-Y_test_01 = Y_test[mask_test_01]
-learning(X_train_pooled_01, X_test_01, Y_train_pooled_01, Y_test_01, num_classes=2, layers=(2,),dirname='model_analysis_pooled_01')
+    # Case 2: 
+    #   Input: Pooling 4x4 and binarization (7x7 images, binary)
+    #   Category: 10 classes (0-9)
+    #   Layers: (10, 8, 2)
+    (X_train_pooled_bin, X_test_pooled_bin) = cvt.binarize(X_train_pooled, X_test_pooled)
+    visualize_dataset(X_train_pooled_bin, Y_train, dirname='visualizations_pooled_bin')
+    learning(X_train_pooled_bin, X_test_pooled_bin, Y_train, Y_test, dirname='model_analysis_pooled_bin')
 
-X_train_pooled_bin_01 = X_train_pooled_bin[mask_train_01]
-X_test_bin_01 = X_test_pooled_bin[mask_test_01]
-learning(X_train_pooled_bin_01, X_test_bin_01, Y_train_pooled_01, Y_test_01, num_classes=2, layers=(2,),dirname='model_analysis_pooled_bin_01')
+    # Case 3: 
+    #   Input: Pooling 4x4 (7x7 images, grayscale) 
+    #   Category: 2 classes (0 and 1)
+    #   Layers: (2, 2)
+    (X_train_pooled_01, Y_train_pooled_01), (X_test_pooled_01, Y_test_01) = cvt.extract_labels([0,1], X_train_pooled, Y_train, X_test_pooled, Y_test)
+    print(f'Number of training samples for digits 0 and 1: {len(Y_train_pooled_01)}')
+    print(f'Number of test samples for digits 0 and 1: {len(Y_test_01)}')
+    learning(X_train_pooled_01, X_test_pooled_01, Y_train_pooled_01, Y_test_01, num_classes=2, layers=(2,),dirname='model_analysis_pooled_01')
+
+    # Case 4: 
+    #   Input: Pooling 4x4 and binarization (7x7 images, binary) 
+    #   Category: 2 classes (0 and 1)
+    #   Layers: (2, 2)
+    (X_train_pooled_bin_01, X_test_pooled_bin_01) = cvt.binarize(X_train_pooled_01, X_test_pooled_01)
+    learning(X_train_pooled_bin_01, X_test_pooled_bin_01, Y_train_pooled_01, Y_test_01, num_classes=2, layers=(2,),dirname='model_analysis_pooled_bin_01')
+
+if __name__ == '__main__':
+    main()
