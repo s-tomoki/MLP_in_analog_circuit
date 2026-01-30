@@ -154,4 +154,13 @@ print(f'Original Y_train shape: {Y_train.shape}')
 X_train_pooled = np.array([average_pool_4x4(image) for image in X_train]).reshape(X_train.shape[0], feature_vector_length)
 X_test_pooled = np.array([average_pool_4x4(image) for image in X_test]).reshape(X_test.shape[0], feature_vector_length)
 visualize_dataset(X_train_pooled, Y_train, dirname='visualizations_pooled')
-learning(X_train_pooled, X_test_pooled, Y_train, Y_test, dirname='model_analysis_pooled')
+# learning(X_train_pooled, X_test_pooled, Y_train, Y_test, dirname='model_analysis_pooled')
+
+mask_train_01 = np.isin(Y_train, [0,1])
+mask_test_01 = np.isin(Y_test, [0,1])
+X_train_pooled_01 = X_train[mask_train_01]
+Y_train_pooled_01 = Y_train[mask_train_01]
+X_test_01 = X_test[mask_test_01]
+Y_test_01 = Y_test[mask_test_01]
+learning(X_train_pooled_01, X_test_01, Y_train_pooled_01, Y_test_01, dirname='model_analysis_pooled_01')
+
