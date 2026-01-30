@@ -27,3 +27,18 @@ pdflatex main.tex
 ```
 
 `main.pdf` が生成されます。
+
+## Keras による MLP の実装
+
+### Setup
+
+`uv` のインストールを実施してください。
+
+### Usage
+
+```bash
+cd model/mlp_in_keras
+uv sync
+uv run mlp_in_keras.py # 通常の MNIST を 3 層 MLP で識別
+uv run mlp_in_keras_bmnist.py # 7x7 に圧縮した MNIST (グレイスケールまたは2値）を MLP で識別
+```
