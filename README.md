@@ -19,17 +19,6 @@
 
 ## Usage
 
-### LaTeX のコンパイル
-
-```latex
-cd latex
-pdflatex main.tex
-```
-
-`main.pdf` が生成されます。
-
-## Keras による MLP の実装
-
 ### Setup
 
 [uv](https://docs.astral.sh/uv/getting-started/installation/) のインストールを実施した後、Python
@@ -41,7 +30,28 @@ pdflatex main.tex
 curl -LsSf https://astral.sh/uv/install.sh | sh # uv のインストール
 uv sync # パッケージをアップデート
 uv sync --check # 環境をチェック
+uv tool install pre-commit flowmark # tool (コマンド) としてパッケージをインストール
+pre-commit install # .git/hooks/pre-commit の設定
 ```
+
+### LaTeX のコンパイル
+
+```latex
+cd latex
+pdflatex main.tex
+```
+
+`main.pdf` が生成されます。
+
+### pre-commit
+
+`git commit` を実行するとコミットを作成する前に `pre-commit` 経由で予め設定されたコマンドを実行することができます。
+
+```bash
+pre-commit run --all
+```
+
+## Keras による MLP の実装
 
 ### Usage
 
