@@ -1,11 +1,11 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from neuralnetwork import NeuralNetwork
 
-inputs = np.array([[0,0], [0,1], [1,0], [1,1]])
+inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 outputs = np.array([[0], [1], [1], [0]])
 
-layers = [2,2,1]
+layers = [2, 2, 1]
 nn = NeuralNetwork(layers, 0.01, 50_000)
 nn.train(inputs, outputs)
 
@@ -22,8 +22,7 @@ predicted_output_binary = np.round(predicted_output)
 # Plot the decision boundary
 x_min, x_max = inputs[:, 0].min() - 0.5, inputs[:, 0].max() + 0.5
 y_min, y_max = inputs[:, 1].min() - 0.5, inputs[:, 1].max() + 0.5
-xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
-                     np.arange(y_min, y_max, 0.1))
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
 Z = np.array([nn.predict(np.array([x, y])) for x, y in zip(xx.ravel(), yy.ravel())])
 Z = np.round(Z.reshape(xx.shape))
 

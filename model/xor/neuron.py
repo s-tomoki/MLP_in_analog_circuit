@@ -1,9 +1,10 @@
 import numpy as np
 
+
 class Neuron:
     def __init__(self, num_inputs):
         # self.weights = np.random.uniform(size=num_inputs)
-        self.weights = np.random.normal(size=num_inputs,scale=(2/num_inputs)**0.5)
+        self.weights = np.random.normal(size=num_inputs, scale=(2 / num_inputs) ** 0.5)
         self.weights = np.random.normal(size=num_inputs)
         self.bias = np.random.uniform()
 
@@ -23,16 +24,15 @@ class Neuron:
     def relu(self, x):
         if x > 0:
             return x
-        else: 
+        else:
             return 0
 
     def relu_derivative(self):
-        if self.sum >0:
+        if self.sum > 0:
             return 1
         else:
             return 0
-    
+
     def update_weights(self, delta, learning_rate):
         self.weights += learning_rate * delta * self.inputs
         self.bias += learning_rate * delta
-    

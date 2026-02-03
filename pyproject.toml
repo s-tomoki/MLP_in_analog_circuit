@@ -18,13 +18,14 @@ select = [
     "E", # pycodestyle
     "W", # pycodestyle warnings
     "I", # isort
-    "D", # pydocstyle
+#    "D", # pydocstyle
 ]
 ignore = []
 # 1行の最大文字数
-line-length = 88
+line-length = 100
 
 extend-ignore = [
+    "D100", # missing-docstring
     "D105", # undocumented-magic-method
     "D107", # undocumented-public-init
     "D205", # blank-line-after-summary

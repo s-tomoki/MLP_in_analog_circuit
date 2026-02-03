@@ -3,8 +3,8 @@
 
 # Imports
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 
 # Configuration options

@@ -1,5 +1,6 @@
 import numpy as np
-from layer import Layer 
+from layer import Layer
+
 
 class NeuralNetwork:
     def __init__(self, layers, learning_rate=0.1, epochs=10_000):
@@ -9,7 +10,7 @@ class NeuralNetwork:
 
         # Initialize layers
         for i in range(len(layers) - 1):
-            self.layers.append(Layer(layers[i+1], layers[i]))
+            self.layers.append(Layer(layers[i + 1], layers[i]))
 
     def train(self, inputs, outputs):
         for epoch in range(self.epochs):
@@ -22,7 +23,7 @@ class NeuralNetwork:
 
                 # Calculate error
                 output_errors = y - activations[-1]
-                total_error += np.sum(output_errors ** 2)
+                total_error += np.sum(output_errors**2)
 
                 # Backward pass
                 errors = output_errors
@@ -32,7 +33,7 @@ class NeuralNetwork:
             # Print MSE every 1000 epochs
             if epoch % 1000 == 0:
                 mse = total_error / len(inputs)
-                print(f'Epoch {epoch}, MSE: {mse}')
+                print(f"Epoch {epoch}, MSE: {mse}")
 
     def predict(self, inputs):
         activations = inputs
@@ -45,4 +46,3 @@ class NeuralNetwork:
         for layer in self.layers:
             weights.append(layer.weights())
         return weights
-
