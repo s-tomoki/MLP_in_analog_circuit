@@ -28,9 +28,10 @@
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh # uv のインストール
-uv sync # パッケージをアップデート
-uv sync --check # 環境をチェック
-uv tool install pre-commit flowmark # tool (コマンド) としてパッケージをインストール
+uv sync && uv sync --check # パッケージをアップデート
+uv pip install --upgrade  "tensorflow[and-cuda]" # CUDA 対応 tensorflow をインストール（任意。CUDAが必要な程モデルは大きくない）
+uv tool install pre-commit
+uv tool install flowmark # tool (コマンド) としてパッケージをインストール
 pre-commit install # .git/hooks/pre-commit の設定
 ```
 
