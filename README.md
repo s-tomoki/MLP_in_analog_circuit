@@ -3,19 +3,19 @@
 ## 目次
 
 1. パーセプトロン
-    1. NAND の実装
-1. MLP
-    1. XOR の実装 
-        1. NAND の組み合わせ(4つで構築)
-        1. 入力の組み合わせ
-1. MNIST
-    1. MLP による学習
-    1. LTSPICE による回路シミュレーション1 （上記全てを再現)
-    1. 枝刈りによる計算量の削減
-    1. LTSPICE による回路シミュレーション2 (削減された回路)
-    1. 回路への実装
-1. 付録
-    1. マイコンとの組み合わせ: DAC/ADC の利用による計算素子の削減
+   1. NAND の実装
+2. MLP
+   1. XOR の実装
+      1. NAND の組み合わせ(4 つで構築)
+      2. 入力の組み合わせ
+3. MNIST
+   1. MLP による学習
+   2. LTSPICE による回路シミュレーション 1 （上記全てを再現)
+   3. 枝刈りによる計算量の削減
+   4. LTSPICE による回路シミュレーション 2 (削減された回路)
+   5. 回路への実装
+4. 付録
+   1. マイコンとの組み合わせ: DAC/ADC の利用による計算素子の削減
 
 ## Usage
 
@@ -32,7 +32,16 @@ pdflatex main.tex
 
 ### Setup
 
-`uv` のインストールを実施してください。
+[uv](https://docs.astral.sh/uv/getting-started/installation/) のインストールを実施した後、Python
+環境を構築してください。
+
+次のコマンドを実行すると一括でできます。
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh # uv のインストール
+uv sync # パッケージをアップデート
+uv sync --check # 環境をチェック
+```
 
 ### Usage
 
