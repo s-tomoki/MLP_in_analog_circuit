@@ -6,6 +6,7 @@ from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.utils import to_categorical
+from tqdm.keras import TqdmCallback
 
 
 class Trainer:
@@ -52,18 +53,17 @@ class Trainer:
         model.add(Dense(self.num_classes, activation="softmax"))
 
         # Configure the model and start training
-        model.compile(
-            loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
-        )
+        model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
         history = model.fit(
             self.X_train,
             self.Y_train,
             epochs=epochs,
             batch_size=batch_size,
-            verbose=1,
+            verbose=0,
             validation_split=0.2,
+            callbacks=[TqdmCallback(verbose=0)],
         )
-        test_results = model.evaluate(self.X_test, self.Y_test, verbose=1)
+        test_results = model.evaluate(self.X_test, self.Y_test, verbose=0)
         print(f"Test results - Loss: {test_results[0]} - Accuracy: {test_results[1]}%")
 
         return (model, test_results, history)
@@ -95,7 +95,7 @@ class Trainer:
         plt.close()
 
         # Print model summary
-        model.summary()
+        #         model.summary()
         with open(f"{dirname}/model_summary.txt", "w") as f:
             model.summary(print_fn=lambda x: f.write(x + "\n"))
         print(f"Model analysis saved to {dirname}/ directory")
@@ -119,9 +119,7 @@ class Trainer:
 
         # Save to CSV
         for key, value in weights_dict.items():
-            np.savetxt(
-                f"{dirname}/{key}.csv", value.reshape(value.shape[0], -1), delimiter=","
-            )
+            np.savetxt(f"{dirname}/{key}.csv", value.reshape(value.shape[0], -1), delimiter=",")
         print(f"Weights saved to {dirname}/*.csv files")
 
         return None

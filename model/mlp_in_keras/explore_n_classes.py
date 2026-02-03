@@ -54,14 +54,14 @@ def run_experiment(
 
             trainer_obj = trainer.Trainer(X_tr_sub, Y_tr_sub, X_te_sub, Y_te_sub, num_classes=n)
             # create a run-specific directory to save model artifacts
-            run_dir = os.path.join(out_dir, f"n{n}_run{run_idx}")
+            run_dir = os.path.join(out_dir, f"n{n}", f"run{run_idx}")
             os.makedirs(run_dir, exist_ok=True)
 
             model, test_results, history = trainer_obj.compile_and_train(
                 layers=layers, epochs=epochs, batch_size=batch_size, dirname=run_dir
             )
             trainer_obj.save_training_history(model, history, dirname=run_dir)
-            trainer_obj.save_model_weights(model, dirname=run_dir)
+            # trainer_obj.save_model_weights(model, dirname=run_dir)
 
             # test_results[1] is accuracy (fraction)
             accs.append(float(test_results[1]))
@@ -69,31 +69,41 @@ def run_experiment(
         results[n] = accs
 
         # Save per-n results to CSV
-        csv_path = os.path.join(out_dir, f"accuracies_n_{n}.csv")
+        csv_path = os.path.join(out_dir, f"n{n}", f"accuracies_n_{n}.csv")
         with open(csv_path, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["run", "accuracy"])
             for i, a in enumerate(accs):
                 writer.writerow([i, a])
 
-    # Aggregate and plot
+    return results
+
+
+def aggregate_and_plot(results, out_dir="explore_n_classes"):
+    """Aggregate results and generate plots and summary statistics."""
     ns = sorted(results.keys())
-    means = [np.mean(results[n]) * 100 for n in ns]
-    stds = [np.std(results[n]) * 100 for n in ns]
+
+    result_dir = os.path.join(out_dir, "result")
+    os.makedirs(result_dir, exist_ok=True)
 
     plt.figure(figsize=(8, 5))
-    plt.errorbar(ns, means, yerr=stds, fmt="-o", capsize=5)
+    box_data = [np.array(results[n]) * 100 for n in ns]
+    plt.boxplot(box_data, tick_labels=ns)
     plt.xlabel("Number of classes")
     plt.ylabel("Accuracy (%)")
-    plt.title("Accuracy vs Number of Classes (mean ± std over runs)")
-    plt.xticks(ns)
-    plt.grid(True, alpha=0.3)
-    plot_path = os.path.join(out_dir, "accuracy_vs_n_classes.png")
+    plt.title("Accuracy vs Number of Classes (boxplot over runs)")
+    plt.grid(True, alpha=0.3, axis="y")
+    plt.ylim(0, 100)
+    plot_path = os.path.join(result_dir, "accuracy_vs_n_classes.png")
     plt.savefig(plot_path, dpi=150)
     plt.close()
 
+    # Calculate statistics for summary
+    means = [np.mean(results[n]) * 100 for n in ns]
+    stds = [np.std(results[n]) * 100 for n in ns]
+
     # Save summary CSV
-    summary_csv = os.path.join(out_dir, "accuracy_summary.csv")
+    summary_csv = os.path.join(result_dir, "accuracy_summary.csv")
     with open(summary_csv, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["n_classes", "mean_accuracy", "std_accuracy"])
@@ -104,7 +114,8 @@ def run_experiment(
 
 
 def main():
-    run_experiment()
+    results = run_experiment()
+    aggregate_and_plot(results)
 
 
 if __name__ == "__main__":
