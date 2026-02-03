@@ -1,3 +1,4 @@
+import json
 import os
 
 import matplotlib.pyplot as plt
@@ -93,6 +94,16 @@ class Trainer:
         plt.tight_layout()
         plt.savefig(f"{dirname}/training_history.png", dpi=150)
         plt.close()
+
+        # Save training history as JSON
+        history_dict = {
+            "loss": [float(x) for x in history.history["loss"]],
+            "val_loss": [float(x) for x in history.history["val_loss"]],
+            "accuracy": [float(x) for x in history.history["accuracy"]],
+            "val_accuracy": [float(x) for x in history.history["val_accuracy"]],
+        }
+        with open(f"{dirname}/training_history.json", "w") as f:
+            json.dump(history_dict, f)
 
         # Print model summary
         #         model.summary()

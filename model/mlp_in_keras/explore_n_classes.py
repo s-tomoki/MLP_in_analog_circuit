@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import random
 
@@ -79,6 +80,118 @@ def run_experiment(
     return results
 
 
+def plot_training_histories(out_dir="explore_n_classes"):
+    """Plot aggregated training histories with shaded regions for each class."""
+    result_dir = os.path.join(out_dir, "result")
+    os.makedirs(result_dir, exist_ok=True)
+
+    # Find all n directories
+    n_dirs = [
+        d
+        for d in os.listdir(out_dir)
+        if d.startswith("n") and os.path.isdir(os.path.join(out_dir, d))
+    ]
+    n_values = sorted([int(d[1:]) for d in n_dirs])
+
+    # Create subplots for loss and accuracy
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    for n in n_values:
+        n_dir = os.path.join(out_dir, f"n{n}")
+        run_dirs = [d for d in os.listdir(n_dir) if d.startswith("run")]
+        run_dirs = sorted(run_dirs, key=lambda x: int(x[3:]))
+
+        # Load history from each run
+        histories = []
+        for run_dir in run_dirs:
+            history_file = os.path.join(n_dir, run_dir, "training_history.json")
+            if os.path.exists(history_file):
+                with open(history_file, "r") as f:
+                    histories.append(json.load(f))
+
+        if not histories:
+            print(f"No training histories found for n={n}")
+            continue
+
+        # Convert to numpy arrays
+        loss = np.array([h["loss"] for h in histories])
+        val_loss = np.array([h["val_loss"] for h in histories])
+        accuracy = np.array([h["accuracy"] for h in histories])
+        val_accuracy = np.array([h["val_accuracy"] for h in histories])
+
+        epochs = np.arange(1, loss.shape[1] + 1)
+
+        # Calculate mean and std
+        loss_mean = np.mean(loss, axis=0)
+        loss_std = np.std(loss, axis=0)
+        val_loss_mean = np.mean(val_loss, axis=0)
+        val_loss_std = np.std(val_loss, axis=0)
+        accuracy_mean = np.mean(accuracy, axis=0)
+        accuracy_std = np.std(accuracy, axis=0)
+        val_accuracy_mean = np.mean(val_accuracy, axis=0)
+        val_accuracy_std = np.std(val_accuracy, axis=0)
+
+        # Plot training loss
+        axes[0, 0].plot(epochs, loss_mean, label=f"n={n}", linewidth=2)
+        axes[0, 0].fill_between(epochs, loss_mean - loss_std, loss_mean + loss_std, alpha=0.2)
+
+        # Plot validation loss
+        axes[0, 1].plot(epochs, val_loss_mean, label=f"n={n}", linewidth=2)
+        axes[0, 1].fill_between(
+            epochs, val_loss_mean - val_loss_std, val_loss_mean + val_loss_std, alpha=0.2
+        )
+
+        # Plot training accuracy
+        axes[1, 0].plot(epochs, accuracy_mean * 100, label=f"n={n}", linewidth=2)
+        axes[1, 0].fill_between(
+            epochs,
+            (accuracy_mean - accuracy_std) * 100,
+            (accuracy_mean + accuracy_std) * 100,
+            alpha=0.2,
+        )
+
+        # Plot validation accuracy
+        axes[1, 1].plot(epochs, val_accuracy_mean * 100, label=f"n={n}", linewidth=2)
+        axes[1, 1].fill_between(
+            epochs,
+            (val_accuracy_mean - val_accuracy_std) * 100,
+            (val_accuracy_mean + val_accuracy_std) * 100,
+            alpha=0.2,
+        )
+
+    # Configure axes
+    axes[0, 0].set_xlabel("Epoch")
+    axes[0, 0].set_ylabel("Loss")
+    axes[0, 0].set_title("Training Loss")
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+
+    axes[0, 1].set_xlabel("Epoch")
+    axes[0, 1].set_ylabel("Loss")
+    axes[0, 1].set_title("Validation Loss")
+    axes[0, 1].legend()
+    axes[0, 1].grid(True, alpha=0.3)
+
+    axes[1, 0].set_xlabel("Epoch")
+    axes[1, 0].set_ylabel("Accuracy (%)")
+    axes[1, 0].set_title("Training Accuracy")
+    axes[1, 0].legend()
+    axes[1, 0].grid(True, alpha=0.3)
+
+    axes[1, 1].set_xlabel("Epoch")
+    axes[1, 1].set_ylabel("Accuracy (%)")
+    axes[1, 1].set_title("Validation Accuracy")
+    axes[1, 1].legend()
+    axes[1, 1].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plot_path = os.path.join(result_dir, "training_histories.png")
+    plt.savefig(plot_path, dpi=150)
+    plt.close()
+
+    print(f"Training histories plot saved to {plot_path}")
+
+
 def aggregate_and_plot(results, out_dir="explore_n_classes"):
     """Aggregate results and generate plots and summary statistics."""
     ns = sorted(results.keys())
@@ -116,6 +229,7 @@ def aggregate_and_plot(results, out_dir="explore_n_classes"):
 def main():
     results = run_experiment()
     aggregate_and_plot(results)
+    plot_training_histories()
 
 
 if __name__ == "__main__":
