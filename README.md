@@ -45,7 +45,10 @@ pdflatex main.tex
 
 ### pre-commit
 
-`git commit` を実行するとコミットを作成する前に `pre-commit` 経由で予め設定されたコマンドを実行することができます。
+このプロジェクトでは Git の `pre-commit` の設定に [pre-commit](https://pre-commit.com/) を利用しています。
+インストールは [Setup](#setup) に記載しています。
+
+`pre-commit` で設定されたコマンドを全て実行するには次のコマンドを実行してください。
 
 ```bash
 pre-commit run --all
