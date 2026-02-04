@@ -1,3 +1,4 @@
+import argparse
 import csv
 import json
 import os
@@ -226,8 +227,37 @@ def aggregate_and_plot(results, out_dir="explore_n_classes"):
     print(f"Experiment finished. Plots and CSVs saved to {out_dir}")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run neural network experiments with different number of classes"
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=30, help="Number of epochs for training (default: 30)"
+    )
+    parser.add_argument(
+        "--n_classes", type=int, default=2, help="Maximum number of classes to use (default: 2)"
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=250, help="Batch size for training (default: 250)"
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=3,
+        help="Number of repeats for each configuration (default: 3)",
+    )
+    return parser.parse_args()
+
+
 def main():
-    results = run_experiment()
+    args = parse_args()
+    results = run_experiment(
+        min_classes=2,
+        max_classes=args.n_classes,
+        repeats=args.repeats,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+    )
     aggregate_and_plot(results)
     plot_training_histories()
 
