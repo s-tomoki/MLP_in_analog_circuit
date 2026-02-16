@@ -1,23 +1,25 @@
 import numpy as np
-import tensorflow as tf
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD
 
 # NANDゲートの学習データ
 X_train = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]], dtype=np.float32)
 y_train = np.array([[1.0], [1.0], [1.0], [0.0]], dtype=np.float32)
 
 # 単純なモデルを定義 (入力層1つ, 出力層1つ)
-model = tf.keras.Sequential([tf.keras.layers.Dense(1, activation="sigmoid", input_shape=(2,))])
-
+model = Sequential()
+model.add(Dense(1, activation="sigmoid", input_shape=(2,)))
 # モデルをコンパイル (損失関数: Binary Crossentropy, オプティマイザ: SGD)
 model.compile(
-    optimizer=tf.keras.optimizers.SGD(learning_rate=0.1),
+    optimizer=SGD(learning_rate=0.1),
     loss="binary_crossentropy",
     metrics=["accuracy"],
 )
 
 # 学習の実行
 # 単純パーセプトロンの場合、学習データが少ないためエポック数を多めに設定
-model.fit(X_train, y_train, epochs=1000, verbose=0)
+model.fit(X_train, y_train, epochs=1_000, verbose=0)
 
 # 結果の確認
 predictions = model.predict(X_train)
@@ -34,3 +36,10 @@ for i in range(len(X_train)):
 weights, biases = model.layers[0].get_weights()
 print(f"\n学習後の重み: {weights.flatten()}")
 print(f"学習後のバイアス: {biases.flatten()}")
+
+# CSV ファイルに重みとバイアスを保存
+np.savetxt("nand_weights.csv", weights, delimiter=",", header="weight_in0,weight_in1", comments="")
+np.savetxt("nand_biases.csv", biases, delimiter=",", header="bias", comments="")
+
+print("\n重みをCSVファイルに保存しました: nand_weights.csv")
+print("バイアスをCSVファイルに保存しました: nand_biases.csv")
