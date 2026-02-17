@@ -55,7 +55,23 @@ pdflatex main.tex
 pre-commit run --all
 ```
 
-## Keras による MLP の実装
+## Keras を用いた単純パーセプトロンによる NAND ゲートの実装
+
+### Usage
+
+```bash
+cd model/nand
+uv sync
+uv run nand.py # Sigmoid, ReLU, Sigmoid-STE による NAND の実装
+uv run nand_infer.py --weights_csv=./nand_weights_sigmoid --bias_csv=./nand_biases_sigmoid.csv # 外部からパラメータを与えた NAND の実装の評価
+```
+
+`nand_infer.py`は外部からパラメータを与えることができます。 デフォルトでは同じパラメータを与えた条件下で活性化関数が Sigmoid 関数と Step 関数の
+2 条件で NAND 演算の精度を比較します。
+
+詳細は `--help` オプションで確認できます。
+
+## Keras を用いた MLP の実装
 
 ### Usage
 
