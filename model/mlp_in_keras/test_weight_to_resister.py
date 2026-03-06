@@ -44,3 +44,30 @@ class TestWeightToRegister:
         resisters, R = self.dut.compute_negative_series(params_neg)
         assert np.allclose(resisters, np.array([-1000.0]))
         assert np.isclose(R, 2.0)
+
+        params_neg = np.array([-0.5])
+        resisters, R = self.dut.compute_negative_series(params_neg)
+        assert np.allclose(resisters, np.array([-2000.0]))
+        assert np.isclose(R, 1.5)
+
+    def test_compute_multiple_neg_params(self):
+        params_neg = np.array([-1.0, -2.0])
+        resisters, R = self.dut.compute_negative_series(params_neg)
+        assert np.allclose(resisters, np.array([-1000.0, -500.0]))
+        assert np.isclose(R, 4.0)
+
+        params_neg = np.array([-0.5, -0.25, -0.125])
+        resisters, R = self.dut.compute_negative_series(params_neg)
+        assert np.allclose(resisters, np.array([-2000.0, -4000.0, -8000.0]))
+        assert np.isclose(R, 1.875)
+
+    def test_compute_negative_with_zero(self):
+        params_neg = np.array([-1.0, 0.0])
+        resisters, R = self.dut.compute_negative_series(params_neg)
+        assert np.allclose(resisters, np.array([-1000.0, np.inf]))
+        assert np.isclose(R, 2.0)
+
+        params_neg = np.array([0.0, -0.5])
+        resisters, R = self.dut.compute_negative_series(params_neg)
+        assert np.allclose(resisters, np.array([np.inf, -2000.0]))
+        assert np.isclose(R, 1.5)
