@@ -31,6 +31,7 @@ plt.scatter(inputs[:, 0], inputs[:, 1], c=outputs.ravel(), cmap=plt.cm.Spectral)
 plt.title("XOR Neural Network Decision Boundary")
 plt.xlabel("Input 1")
 plt.ylabel("Input 2")
+plt.savefig("xor_decision_boundary.png")
 plt.show()
 
 # Print the accuracy

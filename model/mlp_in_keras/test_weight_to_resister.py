@@ -19,13 +19,13 @@ class TestWeightToRegister:
         """[1.0, -1.1] は変化しない"""
         inp = np.array([1.0, -1.1])
         out = self.dut.prune_params(inp)
-        assert np.array_equal(out, np.array([1.0, 1.1]))
+        assert np.array_equal(out, np.array([1.0, -1.1]))
 
     def test_prune_small_positive(self):
         """[-1.0, 1e-6] -> [-1.0, 0]"""
         inp = np.array([-1.0, 1e-6])
         out = self.dut.prune_params(inp)
-        assert np.array_equal(out, np.array([1.0, 0.0]))
+        assert np.array_equal(out, np.array([-1.0, 0.0]))
 
     def test_prune_mixed_small(self):
         """[-3e-8, 3.3] -> [0, 3.3]"""
@@ -104,3 +104,32 @@ class TestWeightToRegister:
         pos_vals = np.array([0.0, 0.1])
         pos_series = self.dut.compute_positive_series(pos_vals, R)
         assert np.allclose(pos_series, np.array([np.inf, 15_000.0]))
+
+    def test_params_to_resisters_single_regs(self):
+        """[-1.0, 1.0] を与えたときに正しい抵抗値を返す"""
+        params = np.array([-1.0, 1.0])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([-1_000.0, 2_000.0]))
+
+        """[-1.0, 1.0] を与えたときに逆順で正しい抵抗値を返す"""
+        params = np.array([1.0, -1.0])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([2_000.0, -1_000.0]))
+
+    def test_params_to_resisters_in_multi_params(self):
+        """複数のパラメータを元の順番を保ったまま抵抗値へ変換する"""
+        params = np.array([-1.0, 1.0, -0.5, 0.5])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([-1_000.0, 2_500.0, -2_000.0, 5_000.0]))
+
+        params = np.array([1.0, -0.5, -1.0, 0.5])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([2_500.0, -2_000.0, -1_000.0, 5_000.0]))
+
+        params = np.array([-1.0, -0.5, 0.5, 1.0])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([-1_000.0, -2_000.0, 5_000.0, 2_500.0]))
+
+        params = np.array([1.0, 0.5, -0.5, -1.0])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([2_500.0, 5_000.0, -2_000.0, -1_000.0]))

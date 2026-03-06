@@ -35,12 +35,11 @@ class WeightToRegister:
         return data.flatten()
 
     @staticmethod
-    def threshold_abs(values: np.ndarray, cutoff: float) -> np.ndarray:
-        """Return absolute values with anything smaller than ``cutoff`` rounded
+    def threshold_round(values: np.ndarray, cutoff: float) -> np.ndarray:
+        """Return values with anything smaller than ``cutoff`` rounded
         to zero.
         """
-        arr = np.abs(values).copy()
-        arr[arr < cutoff] = 0.0
+        arr = np.array([x if abs(x) >= cutoff else 0.0 for x in values])
         return arr
 
     @staticmethod
@@ -83,19 +82,33 @@ class WeightToRegister:
 
     def prune_params(self, params: np.ndarray) -> np.ndarray:
         """Zero out small entries according to the instance cutoff."""
-        return self.threshold_abs(params, cutoff=self.cutoff)
+        return self.threshold_round(params, cutoff=self.cutoff)
 
-    def params_to_registers(self, params: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def params_to_resisters(self, params: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Convert flattened params into negative/positive resistor series."""
-        negatives = params[params < 0]
-        positives = params[params >= 0]
 
-        neg_abs = self.threshold_abs(negatives, cutoff=self.cutoff)
-        pos_abs = self.threshold_abs(positives, cutoff=self.cutoff)
+        array_round = self.threshold_round(params, cutoff=self.cutoff)
+        print(f"array_round: {array_round}")
+        sorted_rank = array_round.argsort().argsort()
+        print(f"sorted_rank: {sorted_rank}")
+        # array_index = np.arange(len(array_round))
+        # array_index_sorted = array_index[sorted_induces]
+        sorted_array = np.sort(array_round)
 
-        neg_series, R = self.compute_negative_series(neg_abs)
-        pos_series = self.compute_positive_series(pos_abs, R)
-        return neg_series, pos_series
+        array_negatives = sorted_array[sorted_array < 0]
+        array_positives = sorted_array[sorted_array >= 0]
+        num_zeros = np.size(array_round) - np.count_nonzero(array_round)
+        print(f"array_negatives: {array_negatives}")
+        print(f"array_positives: {array_positives}")
+
+        neg_series, R = self.compute_negative_series(array_negatives)
+        pos_series = self.compute_positive_series(array_positives, R)
+
+        array_resisters_sorted = np.concatenate([neg_series, np.zeros(num_zeros), pos_series])
+        print(f"array_resisters_sorted: {array_resisters_sorted}")
+        array_resisters_original_order = array_resisters_sorted[sorted_rank]
+        print(f"array_resisters_original_order: {array_resisters_original_order}")
+        return array_resisters_original_order
 
 
 def main():
@@ -116,9 +129,11 @@ def main():
     params = converter.build_params(args.weights, args.bias)
     params_pruned = converter.prune_params(params)
 
-    neg_series, pos_series = converter.params_to_registers(params_pruned)
-
-    converter.save_results(neg_series, pos_series, args.output)
+    converted_resisters = converter.params_to_resisters(params_pruned)
+    converter.save_results(
+        converted_resisters[: len(params)], converted_resisters[len(params) :], args.output
+    )
+    # converter.save_results(neg_series, pos_series, args.output)
     print(f"results written to {args.output}")
 
 
