@@ -1,6 +1,5 @@
 import argparse
 import csv
-import math
 from typing import Tuple
 
 import numpy as np
@@ -45,19 +44,23 @@ class WeightToRegister:
         return arr
 
     @staticmethod
-    def compute_negative_series(neg_vals: np.ndarray) -> Tuple[np.ndarray, float]:
+    def compute_negative_series(
+        params_neg: np.ndarray, res_feedback: float = 1000.0
+    ) -> Tuple[np.ndarray, float]:
         """Compute negative branch series and derived R value."""
         with np.errstate(divide="ignore", invalid="ignore"):
-            f = 1000.0 / neg_vals
-        inv_sum = np.sum(1.0 / f[np.isfinite(f)]) + (1.0 / 1000.0)
-        R = 1000.0 / inv_sum if inv_sum != 0 else math.inf
-        return f, R
+            resisters = res_feedback / params_neg
+        inv_sum = np.sum(1.0 / -resisters) + (1.0 / res_feedback)
+        parallel_resisters = res_feedback * inv_sum
+        return resisters, parallel_resisters
 
     @staticmethod
-    def compute_positive_series(pos_vals: np.ndarray, R: float) -> np.ndarray:
+    def compute_positive_series(
+        pos_vals: np.ndarray, R: float, res_k: float = 1000.0
+    ) -> np.ndarray:
         """Compute positive branch series given R from the negative side."""
         with np.errstate(divide="ignore", invalid="ignore"):
-            return R * 1000.0 / pos_vals
+            return R * res_k / pos_vals
 
     @staticmethod
     def save_results(neg_series: np.ndarray, pos_series: np.ndarray, output: str) -> None:

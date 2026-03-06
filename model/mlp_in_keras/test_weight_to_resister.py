@@ -38,3 +38,9 @@ class TestWeightToRegister:
         inp = np.array([-2e-8, 5e-34])
         out = self.dut.prune_params(inp)
         assert np.array_equal(out, np.array([0.0, 0.0]))
+
+    def test_compute_one_neg_param(self):
+        params_neg = np.array([-1.0])
+        resisters, R = self.dut.compute_negative_series(params_neg)
+        assert np.allclose(resisters, np.array([-1000.0]))
+        assert np.isclose(R, 2.0)
