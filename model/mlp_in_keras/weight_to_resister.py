@@ -96,7 +96,7 @@ class WeightToRegister:
         sorted_array = np.sort(array_round)
 
         array_negatives = sorted_array[sorted_array < 0]
-        array_positives = sorted_array[sorted_array >= 0]
+        array_positives = sorted_array[sorted_array > 0]
         num_zeros = np.size(array_round) - np.count_nonzero(array_round)
         print(f"array_negatives: {array_negatives}")
         print(f"array_positives: {array_positives}")

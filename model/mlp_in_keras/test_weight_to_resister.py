@@ -133,3 +133,17 @@ class TestWeightToRegister:
         params = np.array([1.0, 0.5, -0.5, -1.0])
         resisters = self.dut.params_to_resisters(params)
         assert np.allclose(resisters, np.array([2_500.0, 5_000.0, -2_000.0, -1_000.0]))
+
+    def test_params_to_resisters_with_pruned_values(self):
+        """一部に枝刈りされる値を含むデータを変換する"""
+        params = np.array([-1.0, 1e-8, 1.0])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([-1_000.0, 0, 2_000.0]))
+
+        params = np.array([-1.0, 1.0, -3e-6])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([-1_000.0, 2_000.0, 0]))
+
+        params = np.array([1.0, -6e-5, 2e-5, -1.0])
+        resisters = self.dut.params_to_resisters(params)
+        assert np.allclose(resisters, np.array([2_000.0, 0, 0, -1_000.0]))
