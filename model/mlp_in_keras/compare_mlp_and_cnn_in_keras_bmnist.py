@@ -82,6 +82,22 @@ def count_parameters(model):
     return model.count_params()
 
 
+def save_model_summaries(
+    mlp_model, cnn_model, num_classes, output_dir="compare_mlp_and_cnn_results"
+):
+    """Save model summaries for MLP and CNN."""
+    class_dir = os.path.join(output_dir, f"history_{num_classes}classes")
+    os.makedirs(class_dir, exist_ok=True)
+
+    # Save MLP model summary
+    with open(os.path.join(class_dir, "mlp_model_summary.txt"), "w") as f:
+        mlp_model.summary(print_fn=lambda x: f.write(x + "\n"))
+
+    # Save CNN model summary
+    with open(os.path.join(class_dir, "cnn_model_summary.txt"), "w") as f:
+        cnn_model.summary(print_fn=lambda x: f.write(x + "\n"))
+
+
 def train_model(model, X_train, Y_train, X_test, Y_test, epochs=30, batch_size=250):
     """Train model and return history and test results."""
     history = model.fit(
@@ -316,6 +332,14 @@ def run_comparison(epochs=30, batch_size=250, output_dir="compare_mlp_and_cnn_re
         # Save training history plots for this class count
         save_training_history_plots(
             {"mlp": mlp_history, "cnn": cnn_history},
+            num_classes,
+            output_dir=output_dir,
+        )
+
+        # Save model summaries for this class count
+        save_model_summaries(
+            mlp_model,
+            cnn_model,
             num_classes,
             output_dir=output_dir,
         )
