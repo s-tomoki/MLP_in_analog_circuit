@@ -1,5 +1,4 @@
 import argparse
-import csv
 from typing import Tuple
 
 import numpy as np
@@ -24,22 +23,32 @@ class WeightToRegister:
         The file may contain multiple columns; they are concatenated in row
         order.
         """
+        # Check if the first line is a header
+        with open(file_path, "r") as f:
+            first_line = f.readline().strip()
+            try:
+                # Try to parse the first element as float
+                float(first_line.split(",")[0])
+                skiprows = 0
+            except ValueError:
+                # If not, assume it's a header
+                skiprows = 1
         try:
-            data = np.loadtxt(file_path, delimiter=",")
+            data = np.loadtxt(file_path, delimiter=",", skiprows=skiprows)
         except ValueError:
             # in case of a single value file
             data = np.array([float(open(file_path).read().strip())])
 
         if data.ndim == 0:
             return data.reshape(1)
-        return data.flatten()
+        return data
 
     @staticmethod
     def threshold_round(values: np.ndarray, cutoff: float) -> np.ndarray:
         """Return values with anything smaller than ``cutoff`` rounded
         to zero.
         """
-        arr = np.array([x if abs(x) >= cutoff else 0.0 for x in values])
+        arr = np.where(np.abs(values) >= cutoff, values, 0.0)
         return arr
 
     @staticmethod
@@ -62,38 +71,35 @@ class WeightToRegister:
             return R * res_k / pos_vals
 
     @staticmethod
-    def save_results(neg_series: np.ndarray, pos_series: np.ndarray, output: str) -> None:
-        """Write the two series to a CSV with columns ``negative``/``positive``."""
-        max_len = max(len(neg_series), len(pos_series))
-        with open(output, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["negative", "positive"])
-            for i in range(max_len):
-                neg_val = neg_series[i] if i < len(neg_series) else ""
-                pos_val = pos_series[i] if i < len(pos_series) else ""
-                writer.writerow([neg_val, pos_val])
+    def save_results(array_res: np.ndarray, output: str) -> None:
+        """Write the two series to a CSV."""
+        np.savetxt(output, array_res, delimiter=",", fmt="%g")
 
     # --- instance methods ------------------------------------------------
     def build_params(self, weights_path: str, bias_path: str) -> np.ndarray:
         """Read weight and bias CSVs and concatenate them (weights first)."""
         w = self.read_csv_values(weights_path)
         b = self.read_csv_values(bias_path)
-        return np.concatenate([w, b])
+        print(f"shape of w: {w.shape}, shape of b: {b.shape}")
+        params = np.concatenate([w, b.reshape(-1, w.shape[1])])
+        print(f"params: {params}")
+        return params
 
     def prune_params(self, params: np.ndarray) -> np.ndarray:
         """Zero out small entries according to the instance cutoff."""
         return self.threshold_round(params, cutoff=self.cutoff)
 
-    def params_to_resisters(self, params: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def params_to_resisters(self, params_pruned: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Convert flattened params into negative/positive resistor series."""
 
-        array_round = self.threshold_round(params, cutoff=self.cutoff)
+        array_round = params_pruned
         print(f"array_round: {array_round}")
         sorted_rank = array_round.argsort().argsort()
         print(f"sorted_rank: {sorted_rank}")
         # array_index = np.arange(len(array_round))
         # array_index_sorted = array_index[sorted_induces]
         sorted_array = np.sort(array_round)
+        print(f"sorted_array: {sorted_array}")
 
         array_negatives = sorted_array[sorted_array < 0]
         array_positives = sorted_array[sorted_array > 0]
@@ -125,14 +131,13 @@ def main():
     )
     args = parser.parse_args()
 
-    converter = WeightToRegister()
+    converter = WeightToRegister(cutoff=1e-3)
     params = converter.build_params(args.weights, args.bias)
     params_pruned = converter.prune_params(params)
+    print(f"params_pruned: {params_pruned}")
 
-    converted_resisters = converter.params_to_resisters(params_pruned)
-    converter.save_results(
-        converted_resisters[: len(params)], converted_resisters[len(params) :], args.output
-    )
+    converted_resisters = np.apply_along_axis(converter.params_to_resisters, 0, params_pruned)
+    converter.save_results(converted_resisters, args.output)
     # converter.save_results(neg_series, pos_series, args.output)
     print(f"results written to {args.output}")
 

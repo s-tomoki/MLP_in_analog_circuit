@@ -39,6 +39,12 @@ class TestWeightToRegister:
         out = self.dut.prune_params(inp)
         assert np.array_equal(out, np.array([0.0, 0.0]))
 
+    def test_prune_2x2(self):
+        """[[-1e-5, 1.0], [2e-5, -3e-5]] -> [[0, 1.0], [0, 0]]"""
+        inp = np.array([[-1e-5, 1.0], [2e-5, -3e-5]])
+        out = self.dut.prune_params(inp)
+        assert np.array_equal(out, np.array([[0.0, 1.0], [0.0, 0.0]]))
+
     def test_compute_one_neg_param(self):
         params_neg = np.array([-1.0])
         resisters, R = self.dut.compute_negative_series(params_neg)
@@ -135,15 +141,15 @@ class TestWeightToRegister:
         assert np.allclose(resisters, np.array([2_500.0, 5_000.0, -2_000.0, -1_000.0]))
 
     def test_params_to_resisters_with_pruned_values(self):
-        """一部に枝刈りされる値を含むデータを変換する"""
-        params = np.array([-1.0, 1e-8, 1.0])
+        """一部に枝刈りされた値を含むデータを変換する"""
+        params = np.array([-1.0, 0.0, 1.0])
         resisters = self.dut.params_to_resisters(params)
         assert np.allclose(resisters, np.array([-1_000.0, 0, 2_000.0]))
 
-        params = np.array([-1.0, 1.0, -3e-6])
+        params = np.array([-1.0, 1.0, 0.0])
         resisters = self.dut.params_to_resisters(params)
         assert np.allclose(resisters, np.array([-1_000.0, 2_000.0, 0]))
 
-        params = np.array([1.0, -6e-5, 2e-5, -1.0])
+        params = np.array([1.0, 0.0, 0.0, -1.0])
         resisters = self.dut.params_to_resisters(params)
         assert np.allclose(resisters, np.array([2_000.0, 0, 0, -1_000.0]))
