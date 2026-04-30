@@ -57,10 +57,10 @@ class WeightToRegister:
     ) -> Tuple[np.ndarray, float]:
         """Compute negative branch series and derived R value."""
         with np.errstate(divide="ignore", invalid="ignore"):
-            resisters = res_feedback / params_neg
-        inv_sum = np.sum(1.0 / -resisters) + (1.0 / res_feedback)
-        parallel_resisters = res_feedback * inv_sum
-        return resisters, parallel_resisters
+            resistors = res_feedback / params_neg
+        inv_sum = np.sum(1.0 / -resistors) + (1.0 / res_feedback)
+        parallel_resistors = res_feedback * inv_sum
+        return resistors, parallel_resistors
 
     @staticmethod
     def compute_positive_series(
@@ -89,15 +89,13 @@ class WeightToRegister:
         """Zero out small entries according to the instance cutoff."""
         return self.threshold_round(params, cutoff=self.cutoff)
 
-    def params_to_resisters(self, params_pruned: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def params_to_resistors(self, params_pruned: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Convert flattened params into negative/positive resistor series."""
 
         array_round = params_pruned
         print(f"array_round: {array_round}")
         sorted_rank = array_round.argsort().argsort()
         print(f"sorted_rank: {sorted_rank}")
-        # array_index = np.arange(len(array_round))
-        # array_index_sorted = array_index[sorted_induces]
         sorted_array = np.sort(array_round)
         print(f"sorted_array: {sorted_array}")
 
@@ -110,11 +108,11 @@ class WeightToRegister:
         neg_series, R = self.compute_negative_series(array_negatives)
         pos_series = self.compute_positive_series(array_positives, R)
 
-        array_resisters_sorted = np.concatenate([neg_series, np.zeros(num_zeros), pos_series])
-        print(f"array_resisters_sorted: {array_resisters_sorted}")
-        array_resisters_original_order = array_resisters_sorted[sorted_rank]
-        print(f"array_resisters_original_order: {array_resisters_original_order}")
-        return array_resisters_original_order
+        array_resistors_sorted = np.concatenate([neg_series, np.zeros(num_zeros), pos_series])
+        print(f"array_resistors_sorted: {array_resistors_sorted}")
+        array_resistors_original_order = array_resistors_sorted[sorted_rank]
+        print(f"array_resistors_original_order: {array_resistors_original_order}")
+        return array_resistors_original_order
 
 
 def main():
@@ -136,9 +134,8 @@ def main():
     params_pruned = converter.prune_params(params)
     print(f"params_pruned: {params_pruned}")
 
-    converted_resisters = np.apply_along_axis(converter.params_to_resisters, 0, params_pruned)
-    converter.save_results(converted_resisters, args.output)
-    # converter.save_results(neg_series, pos_series, args.output)
+    converted_resistors = np.apply_along_axis(converter.params_to_resistors, 0, params_pruned)
+    converter.save_results(converted_resistors, args.output)
     print(f"results written to {args.output}")
 
 
