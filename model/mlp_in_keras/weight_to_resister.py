@@ -14,6 +14,7 @@ class WeightToRegister:
 
     def __init__(self, cutoff: float = 1e-4) -> None:
         self.cutoff = cutoff
+        self.res_k = 0.0
 
     # --- static helpers --------------------------------------------------
     @staticmethod
@@ -63,17 +64,14 @@ class WeightToRegister:
         return resistors, parallel_resistors
 
     @staticmethod
-    def compute_positive_series(
-        pos_vals: np.ndarray, R: float, res_k: float = 1000.0
-    ) -> np.ndarray:
+    def compute_positive_series(pos_vals: np.ndarray, res_k: float) -> np.ndarray:
         """Compute positive branch series given R from the negative side."""
         with np.errstate(divide="ignore", invalid="ignore"):
-            return R * res_k / pos_vals
+            return res_k / pos_vals
 
-    @staticmethod
-    def save_results(array_res: np.ndarray, output: str) -> None:
+    def save_results(self, array_res: np.ndarray, output: str) -> None:
         """Write the two series to a CSV."""
-        np.savetxt(output, array_res, delimiter=",", fmt="%g")
+        np.savetxt(output, array_res, delimiter=",", fmt="%g", header=f"res_k={self.res_k}")
 
     # --- instance methods ------------------------------------------------
     def build_params(self, weights_path: str, bias_path: str) -> np.ndarray:
@@ -92,6 +90,8 @@ class WeightToRegister:
     def params_to_resistors(self, params_pruned: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Convert flattened params into negative/positive resistor series."""
 
+        res_feedback = 1000.0
+
         array_round = params_pruned
         print(f"array_round: {array_round}")
         sorted_rank = array_round.argsort().argsort()
@@ -105,8 +105,9 @@ class WeightToRegister:
         print(f"array_negatives: {array_negatives}")
         print(f"array_positives: {array_positives}")
 
-        neg_series, R = self.compute_negative_series(array_negatives)
-        pos_series = self.compute_positive_series(array_positives, R)
+        neg_series, R = self.compute_negative_series(array_negatives, res_feedback)
+        self.res_k = res_feedback * R  # fix res_k value
+        pos_series = self.compute_positive_series(array_positives, self.res_k)
 
         array_resistors_sorted = np.concatenate([neg_series, np.zeros(num_zeros), pos_series])
         print(f"array_resistors_sorted: {array_resistors_sorted}")

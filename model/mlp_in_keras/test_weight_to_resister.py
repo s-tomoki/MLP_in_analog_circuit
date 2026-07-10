@@ -79,77 +79,86 @@ class TestWeightToRegister:
         assert np.isclose(R, 1.5)
 
     def test_compute_one_positive_param(self):
+        res_feedback = 1000.0
         R = 2.0
+        res_k = res_feedback * R
         pos_vals = np.array([1.0])
-        pos_series = self.dut.compute_positive_series(pos_vals, R)
+        pos_series = self.dut.compute_positive_series(pos_vals, res_k)
         assert np.allclose(pos_series, np.array([2_000.0]))
 
         R = 1.5
+        res_k = res_feedback * R
         pos_vals = np.array([0.5])
-        pos_series = self.dut.compute_positive_series(pos_vals, R)
+        pos_series = self.dut.compute_positive_series(pos_vals, res_k)
         assert np.allclose(pos_series, np.array([3_000.0]))
 
     def test_compute_multiple_positive_params(self):
+        res_feedback = 1000.0
         R = 4.0
+        res_k = res_feedback * R
         pos_vals = np.array([1.0, 2.0])
-        pos_series = self.dut.compute_positive_series(pos_vals, R)
+        pos_series = self.dut.compute_positive_series(pos_vals, res_k)
         assert np.allclose(pos_series, np.array([4_000.0, 2_000.0]))
 
         R = 1.875
+        res_k = res_feedback * R
         pos_vals = np.array([0.5, 0.25, 0.125])
-        pos_series = self.dut.compute_positive_series(pos_vals, R)
+        pos_series = self.dut.compute_positive_series(pos_vals, res_k)
         assert np.allclose(pos_series, np.array([3_750.0, 7_500.0, 15_000.0]))
 
     def test_compute_positive_with_zero(self):
+        res_feedback = 1000.0
         R = 2.0
+        res_k = res_feedback * R
         pos_vals = np.array([1.0, 0.0])
-        pos_series = self.dut.compute_positive_series(pos_vals, R)
+        pos_series = self.dut.compute_positive_series(pos_vals, res_k)
         assert np.allclose(pos_series, np.array([2_000.0, np.inf]))
 
         R = 1.5
+        res_k = res_feedback * R
         pos_vals = np.array([0.0, 0.1])
-        pos_series = self.dut.compute_positive_series(pos_vals, R)
+        pos_series = self.dut.compute_positive_series(pos_vals, res_k)
         assert np.allclose(pos_series, np.array([np.inf, 15_000.0]))
 
-    def test_params_to_resisters_single_regs(self):
+    def test_params_to_resistors_single_regs(self):
         """[-1.0, 1.0] を与えたときに正しい抵抗値を返す"""
         params = np.array([-1.0, 1.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([-1_000.0, 2_000.0]))
 
         """[-1.0, 1.0] を与えたときに逆順で正しい抵抗値を返す"""
         params = np.array([1.0, -1.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([2_000.0, -1_000.0]))
 
-    def test_params_to_resisters_in_multi_params(self):
+    def test_params_to_resistors_in_multi_params(self):
         """複数のパラメータを元の順番を保ったまま抵抗値へ変換する"""
         params = np.array([-1.0, 1.0, -0.5, 0.5])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([-1_000.0, 2_500.0, -2_000.0, 5_000.0]))
 
         params = np.array([1.0, -0.5, -1.0, 0.5])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([2_500.0, -2_000.0, -1_000.0, 5_000.0]))
 
         params = np.array([-1.0, -0.5, 0.5, 1.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([-1_000.0, -2_000.0, 5_000.0, 2_500.0]))
 
         params = np.array([1.0, 0.5, -0.5, -1.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([2_500.0, 5_000.0, -2_000.0, -1_000.0]))
 
-    def test_params_to_resisters_with_pruned_values(self):
+    def test_params_to_resistors_with_pruned_values(self):
         """一部に枝刈りされた値を含むデータを変換する"""
         params = np.array([-1.0, 0.0, 1.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([-1_000.0, 0, 2_000.0]))
 
         params = np.array([-1.0, 1.0, 0.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([-1_000.0, 2_000.0, 0]))
 
         params = np.array([1.0, 0.0, 0.0, -1.0])
-        resisters = self.dut.params_to_resisters(params)
+        resisters = self.dut.params_to_resistors(params)
         assert np.allclose(resisters, np.array([2_000.0, 0, 0, -1_000.0]))
