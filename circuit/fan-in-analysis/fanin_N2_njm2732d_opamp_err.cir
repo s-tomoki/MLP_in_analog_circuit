@@ -1,0 +1,28 @@
+* Fan-in summing amplifier, N=2, mode=opamp_err
+* preset note: Nisshinbo/NJRC NJM2732D. Ilimit not found in available sources; using generic estimate -- verify if output-current limiting matters for your test.
+.include UniversalOpAmp2.lib
+
+.subckt MyOpAmp 1 2 3 4 5
+* pins: 1=IN+ 2=IN- 3=VCC 4=VEE 5=OUT
+X_internal 1 2 3 4 5 level2 params: Avol=85 GBW=1e+06 Slew=400000 Vos=0.005 Ib=5e-08 Ios=5e-09 rail=0.25 ilimit=0.025
+.ends MyOpAmp
+
+.param Rin_nom=10000 Rf_nom=10000
+V+ vcc 0 2.5
+V- vee 0 -2.5
+Vinp inp 0 0
+XU1 inp inn vcc vee out MyOpAmp
+Rf inn out {Rf_nom}
+Vin1 n1 0 PWL(0 -1 0.001 -1 0.001001 1 0.002 1 0.002001 -1 0.003 -1 0.003001 1 0.006 1)
+Rin1 n1 inn {Rin_nom}
+Vin2 n2 0 PWL(0 -1 0.002 -1 0.002001 1 0.003 1 0.003001 -1 0.004 -1 0.004001 1 0.006 1)
+Rin2 n2 inn {Rin_nom}
+.tran 0 0.006 0 2e-07
+.meas TRAN vph_lo AVG V(out) FROM=5e-06 TO=0.000995
+.meas TRAN vph_oh1 AVG V(out) FROM=0.001005 TO=0.001995
+.meas TRAN vph_oh2 AVG V(out) FROM=0.002005 TO=0.002995
+.meas TRAN vph_cum1 AVG V(out) FROM=0.003005 TO=0.003995
+.meas TRAN vph_cum2 AVG V(out) FROM=0.004005 TO=0.004995
+.meas TRAN vph_hi AVG V(out) FROM=0.005005 TO=0.005995
+.backanno
+.end
