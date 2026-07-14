@@ -1,0 +1,46 @@
+{#-
+  Fan-in summing amplifier netlist template.
+
+  Used for BOTH:
+    - "full" netlists: all 2N+2 test phases in one .tran run
+    - "phase" netlists: a single test phase, for parallel job-splitting
+
+  All PWL/measurement string construction happens in Python (gen_fanin_netlist.py)
+  -- this template only arranges the already-formatted pieces into the final
+  .cir document. Keeping the procedural PWL-breakpoint / settle-time logic in
+  Python (rather than forcing it into Jinja expressions) keeps that logic
+  testable and avoids an unreadable template.
+-#}
+* Fan-in summing amplifier, N={{ n }}, mode={{ mode }} (phase-only: {{ phase }})
+
+* scale_mode={{ scale_mode }} Rf0={{ rf0 }} Rin0={{ rin0 }} -> Rf={{ rf }} Rin={{ rin }}
+* preset note: {{ preset_note }}
+.include {{ opamp_lib }}
+
+.subckt MyOpAmp 1 2 3 4 5
+* pins: 1=IN+ 2=IN- 3=VCC 4=VEE 5=OUT
+{% if vos_sweep_param_line -%}
+{{ vos_sweep_param_line }}
+{% endif -%}
+X_internal 1 2 3 4 5 {{ opamp_model }} params: Avol={{ avol_linear }} GBW={{ gbw }} Slew={{ slew }} Vos={{ vos_expr }} Ib={{ ib }} Ios={{ ios }} rail={{ rail }} ilimit={{ ilimit }}
+.ends MyOpAmp
+
+.param Rin_nom={{ rin }} Rf_nom={{ rf }}
+V+ vcc 0 {{ vsupply }}
+V- vee 0 -{{ vsupply }}
+Vinp inp 0 0
+XU1 inp inn vcc vee out MyOpAmp
+Rf inn out {{ rf_expr }}
+{% for src in sources -%}
+Vin{{ src.idx }} n{{ src.idx }} 0 {{ src.pwl }}
+Rin{{ src.idx }} n{{ src.idx }} inn {{ rin_expr }}
+{% endfor -%}
+{{ tran_line }}
+{% if step_line -%}
+{{ step_line }}
+{% endif -%}
+{% for m in meas_lines -%}
+{{ m }}
+{% endfor -%}
+.backanno
+.end

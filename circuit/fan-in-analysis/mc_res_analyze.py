@@ -27,42 +27,81 @@ resistor-tolerance behavior of vph_oh*). Use --include-cum to include them,
 or --labels to pick an explicit subset.
 
 Usage:
+    # 単一.logファイルから(従来通り、複数Measurementブロックが1ファイルに
+    # まとまっている場合)
     python3 mc_res_analyze.py fanin_N2_mcp6232_rin_scale_mc_res.log \
         --n 2 --scale-mode rin_scale --rf0 10e3 --rin0 10e3 \
         --vhi 1.0 --vlo -1.0 \
         --fail-threshold-pct 5.0 \
         --csv-out mc_raw.csv
+
+    # zipファイルから(フェーズ単位分割で生成された .log 群をまとめてzip化した
+    # 場合。zip内の全 *.log を読み込んで結果をマージする)
+    python3 mc_res_analyze.py mcp6232_N16.zip \
+        --n 16 --scale-mode rin_scale --rf0 10e3 --rin0 10e3 \
+        --vhi 1.0 --vlo -1.0 --fail-threshold-pct 5.0
 """
 import argparse
 import csv
 import re
 import statistics
 import sys
+import zipfile
 
 import fanin_scaling
 
+HEADER_RE = re.compile(r"^\s*Measurement:\s*(\S+)")
+ROW_RE = re.compile(r"^\s*(\d+)\s+([\-0-9.eE+]+)\s+([\-0-9.eE+]+)\s+([\-0-9.eE+]+)\s*$")
 
-def parse_mc_log(path):
-    """Returns dict: label -> list of (step:int, value:float)."""
+
+def parse_mc_log_text(text):
+    """Returns dict: label -> list of (step:int, value:float), from the
+    text content of ONE .log file (which may contain one or many
+    'Measurement: <label>' blocks)."""
     blocks = {}
     current = None
-    header_re = re.compile(r"^\s*Measurement:\s*(\S+)")
-    row_re = re.compile(r"^\s*(\d+)\s+([\-0-9.eE+]+)\s+([\-0-9.eE+]+)\s+([\-0-9.eE+]+)\s*$")
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        for raw_line in f:
-            line = raw_line.rstrip("\r\n")
-            m = header_re.match(line)
-            if m:
-                current = m.group(1)
-                blocks[current] = []
-                continue
-            if current is None:
-                continue
-            m2 = row_re.match(line)
-            if m2:
-                step = int(m2.group(1))
-                value = float(m2.group(2))
-                blocks[current].append((step, value))
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip("\r\n")
+        m = HEADER_RE.match(line)
+        if m:
+            current = m.group(1)
+            blocks.setdefault(current, [])
+            continue
+        if current is None:
+            continue
+        m2 = ROW_RE.match(line)
+        if m2:
+            step = int(m2.group(1))
+            value = float(m2.group(2))
+            blocks[current].append((step, value))
+    return blocks
+
+
+def merge_blocks(dst, src):
+    for label, rows in src.items():
+        dst.setdefault(label, []).extend(rows)
+
+
+def load_blocks(path):
+    """Returns dict: label -> list of (step, value).
+    Accepts either a single .log file, or a .zip archive containing
+    multiple .log files (as produced by run_fanin_batch.sh's per-phase
+    job splitting) -- in the zip case, every *.log member is parsed and
+    the results are merged (each phase-only log normally contributes
+    exactly one label, so merging is just a dict union)."""
+    blocks = {}
+    if path.lower().endswith(".zip"):
+        with zipfile.ZipFile(path, "r") as zf:
+            log_names = [n for n in zf.namelist() if n.lower().endswith(".log")]
+            if not log_names:
+                print(f"WARNING: no .log files found inside {path}", file=sys.stderr)
+            for name in log_names:
+                text = zf.read(name).decode("utf-8", errors="ignore")
+                merge_blocks(blocks, parse_mc_log_text(text))
+    else:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            text = f.read()
+        blocks = parse_mc_log_text(text)
     return blocks
 
 
@@ -93,14 +132,16 @@ def select_labels(all_labels, args):
         return [w for w in wanted if w in all_labels]
     if args.include_cum:
         return sorted(all_labels)
-    return sorted(ls for ls in all_labels if not ls.startswith("vph_cum"))
+    return sorted(lst for lst in all_labels if not lst.startswith("vph_cum"))
 
 
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("logfile")
+    ap.add_argument(
+        "logfile", help="path to a .log file, or a .zip archive " "containing multiple *.log files"
+    )
     ap.add_argument("--n", type=int, required=True)
     fanin_scaling.add_scaling_args(ap)
     ap.add_argument("--vhi", type=float, default=1.0)
@@ -128,7 +169,7 @@ def main():
     )
     args = ap.parse_args()
 
-    blocks = parse_mc_log(args.logfile)
+    blocks = load_blocks(args.logfile)
     if not blocks:
         print(
             "No 'Measurement:' blocks found -- is this really a multi-step "

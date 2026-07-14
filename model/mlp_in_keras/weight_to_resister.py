@@ -12,8 +12,9 @@ class WeightToRegister:
     thresholding.
     """
 
-    def __init__(self, cutoff: float = 1e-4) -> None:
+    def __init__(self, use_cascade: bool = False, cutoff: float = 1e-4) -> None:
         self.cutoff = cutoff
+        self.use_cascade = use_cascade
         self.res_k = 0.0
 
     # --- static helpers --------------------------------------------------
@@ -106,7 +107,7 @@ class WeightToRegister:
         print(f"array_positives: {array_positives}")
 
         neg_series, R = self.compute_negative_series(array_negatives, res_feedback)
-        self.res_k = res_feedback * R  # fix res_k value
+        self.res_k = res_feedback if (self.use_cascade) else res_feedback * R  # fix res_k value
         pos_series = self.compute_positive_series(array_positives, self.res_k)
 
         array_resistors_sorted = np.concatenate([neg_series, np.zeros(num_zeros), pos_series])
@@ -128,9 +129,15 @@ def main():
         default="resistor_values.csv",
         help="Output CSV file for the results",
     )
+    parser.add_argument(
+        "--use_cascade",
+        action="store_true",
+        help="Calculate resister value for cascade architecture "
+        + "(not for add-sub, do not calculate R_par)",
+    )
     args = parser.parse_args()
 
-    converter = WeightToRegister(cutoff=1e-3)
+    converter = WeightToRegister(cutoff=1e-3, use_cascade=args.use_cascade)
     params = converter.build_params(args.weights, args.bias)
     params_pruned = converter.prune_params(params)
     print(f"params_pruned: {params_pruned}")
