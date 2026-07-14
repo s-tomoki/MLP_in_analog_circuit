@@ -12,12 +12,14 @@ utility (`pip install PyLTSpice`) which is purpose-built for step-table
 logs -- a hand-rolled regex here would be fragile across LTSpice versions.
 
 Usage:
-    python3 analyze_results.py fanin_N2_mcp6232_opamp_err.log --n 2 \
-        --rin 10e3 --rf 10e3 --vhi 1.0 --vlo -1.0
+    python3 analyze_results.py fanin_N2_mcp6232_rin_scale_opamp_err.log --n 2 \
+        --scale-mode rin_scale --rf0 10e3 --rin0 10e3 --vhi 1.0 --vlo -1.0
 """
 import argparse
 import re
 import sys
+
+import fanin_scaling
 
 
 def parse_log(path):
@@ -49,11 +51,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("logfile")
     ap.add_argument("--n", type=int, required=True)
-    ap.add_argument("--rin", type=float, default=10e3)
-    ap.add_argument("--rf", type=float, default=10e3)
+    fanin_scaling.add_scaling_args(ap)
     ap.add_argument("--vhi", type=float, default=1.0)
     ap.add_argument("--vlo", type=float, default=-1.0)
     args = ap.parse_args()
+
+    rf, rin = fanin_scaling.compute_rf_rin(args.n, args.scale_mode, args.rf0, args.rin0)
+    print(f"# N={args.n} scale_mode={args.scale_mode} -> Rf={rf:.6g} Rin={rin:.6g}")
 
     measured = parse_log(args.logfile)
     if not measured:
@@ -64,7 +68,7 @@ def main():
         )
         sys.exit(1)
 
-    ideal = ideal_values(args.n, args.rin, args.rf, args.vhi, args.vlo)
+    ideal = ideal_values(args.n, rin, rf, args.vhi, args.vlo)
     full_scale = ideal["vph_hi"] - ideal["vph_lo"]
 
     print(f"{'label':<10} {'measured[V]':>12} {'ideal[V]':>10} {'err[%FS]':>10}")

@@ -37,6 +37,8 @@ NOTE / CAVEATS:
 import argparse
 import os
 
+import fanin_scaling
+
 # ----------------------------------------------------------------------
 # Device presets (values gathered from datasheets; see chat for sources).
 # Units: vos[V], ib[A], ios[A], avol[dB] (converted to linear V/V before
@@ -127,13 +129,23 @@ def fmt_pwl(pts):
     return "PWL(" + " ".join(f"{t:.9g} {v:.6g}" for t, v in pts) + ")"
 
 
-def estimate_settle_time(n, rf, rin, vhi, vlo, slew, gbw, n_tau=12, safety=1.5):
+def estimate_settle_time(n, rf, rin, vhi, vlo, slew, gbw, vsupply, rail, n_tau=12, safety=1.5):
     """Estimate worst-case settling time for a step of size (vhi-vlo) through
     this inverting summing amp, given the opamp's Slew[V/s] and GBW[Hz].
     Returns seconds. Used to size the .meas averaging-window margin so we
-    don't measure while the output is still slewing/settling."""
+    don't measure while the output is still slewing/settling.
+
+    full_swing is capped at the physically achievable output range
+    (2*(vsupply-rail)) -- without this cap, the naive noise-gain-scaled
+    ideal swing (which grows with N and is NOT what the output can actually
+    do once it clips at the rail) blows up settling-time estimates for
+    large N, especially for low-slew-rate devices. This was the root cause
+    of a large, preset-dependent runtime discrepancy at N=16 (MCP6232 taking
+    ~2.6x longer than NJM2732D despite near-identical netlist size)."""
     noise_gain = 1.0 + n * (rf / rin)
-    full_swing = abs(vhi - vlo) * noise_gain
+    full_swing_ideal = abs(vhi - vlo) * noise_gain
+    full_swing_max = 2.0 * max(vsupply - rail, 0.0)
+    full_swing = min(full_swing_ideal, full_swing_max) if full_swing_max > 0 else full_swing_ideal
     slew_time = full_swing / slew if slew > 0 else 0.0
     closed_loop_bw = gbw / noise_gain if noise_gain > 0 else gbw
     tau = 1.0 / (2 * 3.141592653589793 * closed_loop_bw) if closed_loop_bw > 0 else 0.0
@@ -142,8 +154,7 @@ def estimate_settle_time(n, rf, rin, vhi, vlo, slew, gbw, n_tau=12, safety=1.5):
 
 
 def gen_netlist(n, mode, args, preset):
-    rin = args.rin
-    rf = args.rf
+    rf, rin = fanin_scaling.compute_rf_rin(n, args.scale_mode, args.rf0, args.rin0)
     tol = args.tol
     vsupply = args.vsupply if args.vsupply is not None else preset["vsupply"]
     vhi = args.vhi
@@ -154,7 +165,9 @@ def gen_netlist(n, mode, args, preset):
     # so we don't average while the output is still slewing/settling
     # (this was the root cause of the ~1-2% errors seen in earlier runs --
     # not a real Vos/Avol DC limitation, just measuring too early).
-    settle = estimate_settle_time(n, rf, rin, vhi, vlo, preset["slew"], preset["gbw"])
+    settle = estimate_settle_time(
+        n, rf, rin, vhi, vlo, preset["slew"], preset["gbw"], vsupply, preset["rail"]
+    )
     margin = max(rise * 5, settle)
     if args.phase_time is not None:
         T = args.phase_time
@@ -179,6 +192,10 @@ def gen_netlist(n, mode, args, preset):
 
     lines = []
     lines.append(f"* Fan-in summing amplifier, N={n}, mode={mode}")
+    lines.append(
+        f"* scale_mode={args.scale_mode} Rf0={args.rf0:.6g} Rin0={args.rin0:.6g} "
+        f"-> Rf={rf:.6g} Rin={rin:.6g}"
+    )
     lines.append(f"* preset note: {preset['note']}")
     # UniversalOpAmp2 must be explicitly loaded when running a bare .cir
     # netlist (schematic capture does this automatically, .cir does not).
@@ -274,8 +291,7 @@ def main():
         "confirmed working: Avol/GBW/Slew/Vos/Ib/Ios/rail/ilimit)",
     )
 
-    ap.add_argument("--rin", type=float, default=10e3)
-    ap.add_argument("--rf", type=float, default=10e3)
+    fanin_scaling.add_scaling_args(ap)
     ap.add_argument("--vhi", type=float, default=1.0)
     ap.add_argument("--vlo", type=float, default=-1.0)
     ap.add_argument(
@@ -318,7 +334,7 @@ def main():
 
     for n in n_list:
         text = gen_netlist(n, args.mode, args, preset)
-        fname = f"fanin_N{n}_{args.preset}_{args.mode}.cir"
+        fname = f"fanin_N{n}_{args.preset}_{args.scale_mode}_{args.mode}.cir"
         path = os.path.join(args.outdir, fname)
         with open(path, "w") as f:
             f.write(text)
