@@ -39,7 +39,9 @@ import os
 
 # ----------------------------------------------------------------------
 # Device presets (values gathered from datasheets; see chat for sources).
-# Units: vos[V], ib[A], ios[A], avol[dB], gbw[Hz], slew[V/s],
+# Units: vos[V], ib[A], ios[A], avol[dB] (converted to linear V/V before
+# being passed to the model, since level2's Avol param is linear, not dB),
+# gbw[Hz], slew[V/s],
 #        rail[V] (dropout from each supply rail), ilimit[A], vsupply[V] (+-)
 # ----------------------------------------------------------------------
 PRESETS = {
@@ -125,6 +127,20 @@ def fmt_pwl(pts):
     return "PWL(" + " ".join(f"{t:.9g} {v:.6g}" for t, v in pts) + ")"
 
 
+def estimate_settle_time(n, rf, rin, vhi, vlo, slew, gbw, n_tau=12, safety=1.5):
+    """Estimate worst-case settling time for a step of size (vhi-vlo) through
+    this inverting summing amp, given the opamp's Slew[V/s] and GBW[Hz].
+    Returns seconds. Used to size the .meas averaging-window margin so we
+    don't measure while the output is still slewing/settling."""
+    noise_gain = 1.0 + n * (rf / rin)
+    full_swing = abs(vhi - vlo) * noise_gain
+    slew_time = full_swing / slew if slew > 0 else 0.0
+    closed_loop_bw = gbw / noise_gain if noise_gain > 0 else gbw
+    tau = 1.0 / (2 * 3.141592653589793 * closed_loop_bw) if closed_loop_bw > 0 else 0.0
+    linear_settle = n_tau * tau
+    return safety * (slew_time + linear_settle)
+
+
 def gen_netlist(n, mode, args, preset):
     rin = args.rin
     rf = args.rf
@@ -132,8 +148,27 @@ def gen_netlist(n, mode, args, preset):
     vsupply = args.vsupply if args.vsupply is not None else preset["vsupply"]
     vhi = args.vhi
     vlo = args.vlo
-    T = args.phase_time
     rise = args.rise_time
+
+    # Auto-size phase_time / measurement margin from the opamp's Slew & GBW
+    # so we don't average while the output is still slewing/settling
+    # (this was the root cause of the ~1-2% errors seen in earlier runs --
+    # not a real Vos/Avol DC limitation, just measuring too early).
+    settle = estimate_settle_time(n, rf, rin, vhi, vlo, preset["slew"], preset["gbw"])
+    margin = max(rise * 5, settle)
+    if args.phase_time is not None:
+        T = args.phase_time
+        if margin > T * 0.3:
+            print(
+                f"WARNING: N={n} preset={args.preset}: estimated settle time "
+                f"({settle*1e6:.1f}us) is large relative to --phase-time "
+                f"({T*1e6:.1f}us). Measurement window may still be too tight; "
+                f"consider --phase-time {max(T, margin/0.2):.2e} or higher."
+            )
+    else:
+        # auto: leave at least 5x settle time as usable averaging window
+        T = max(1e-3, margin / 0.2)
+    margin = min(margin, T * 0.45)  # never eat the whole window
 
     # timeline boundaries
     t_lo = 0.0
@@ -165,7 +200,7 @@ def gen_netlist(n, mode, args, preset):
         vos_expr = "{V_offset}"
     lines.append(
         f"X_internal 1 2 3 4 5 {args.opamp_model} params: "
-        f"Avol={preset['avol']:.6g} GBW={preset['gbw']:.6g} "
+        f"Avol={10**(preset['avol']/20):.6g} GBW={preset['gbw']:.6g} "
         f"Slew={preset['slew']:.6g} Vos={vos_expr} "
         f"Ib={preset['ib']:.6g} Ios={preset['ios']:.6g} "
         f"rail={preset['rail']:.6g} ilimit={preset['ilimit']:.6g}"
@@ -198,8 +233,7 @@ def gen_netlist(n, mode, args, preset):
     if mode == "mc_res":
         lines.append(f".step param run 1 {args.mc_runs} 1")
 
-    # .meas: settled-average window with margin to avoid transition edges
-    margin = min(rise * 5, T * 0.1)
+    # .meas: settled-average window (margin computed above from settle time)
 
     def meas(label, t0, t1):
         return f".meas TRAN vph_{label} AVG V(out) FROM={t0+margin:.9g} TO={t1-margin:.9g}"
@@ -248,7 +282,14 @@ def main():
         "--vsupply", type=float, default=None, help="override preset supply magnitude (+-V)"
     )
 
-    ap.add_argument("--phase-time", type=float, default=1e-3)
+    ap.add_argument(
+        "--phase-time",
+        type=float,
+        default=None,
+        help="seconds per test phase; default: auto-sized from "
+        "the preset's Slew/GBW so measurement windows are "
+        "safely settled",
+    )
     ap.add_argument("--rise-time", type=float, default=1e-6)
 
     ap.add_argument(

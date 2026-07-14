@@ -4,7 +4,7 @@
 
 .subckt MyOpAmp 1 2 3 4 5
 * pins: 1=IN+ 2=IN- 3=VCC 4=VEE 5=OUT
-X_internal 1 2 3 4 5 level2 params: Avol=110 GBW=300000 Slew=150000 Vos=0.005 Ib=1e-12 Ios=1e-12 rail=0.15 ilimit=0.023
+X_internal 1 2 3 4 5 level2 params: Avol=316228 GBW=300000 Slew=150000 Vos=0.005 Ib=1e-12 Ios=1e-12 rail=0.15 ilimit=0.023
 .ends MyOpAmp
 
 .param Rin_nom=10000 Rf_nom=10000
@@ -18,11 +18,11 @@ Rin1 n1 inn {Rin_nom}
 Vin2 n2 0 PWL(0 -1 0.002 -1 0.002001 1 0.003 1 0.003001 -1 0.004 -1 0.004001 1 0.006 1)
 Rin2 n2 inn {Rin_nom}
 .tran 0 0.006 0 2e-07
-.meas TRAN vph_lo AVG V(out) FROM=5e-06 TO=0.000995
-.meas TRAN vph_oh1 AVG V(out) FROM=0.001005 TO=0.001995
-.meas TRAN vph_oh2 AVG V(out) FROM=0.002005 TO=0.002995
-.meas TRAN vph_cum1 AVG V(out) FROM=0.003005 TO=0.003995
-.meas TRAN vph_cum2 AVG V(out) FROM=0.004005 TO=0.004995
-.meas TRAN vph_hi AVG V(out) FROM=0.005005 TO=0.005995
+.meas TRAN vph_lo AVG V(out) FROM=8.86478898e-05 TO=0.00091135211
+.meas TRAN vph_oh1 AVG V(out) FROM=0.00108864789 TO=0.00191135211
+.meas TRAN vph_oh2 AVG V(out) FROM=0.00208864789 TO=0.00291135211
+.meas TRAN vph_cum1 AVG V(out) FROM=0.00308864789 TO=0.00391135211
+.meas TRAN vph_cum2 AVG V(out) FROM=0.00408864789 TO=0.00491135211
+.meas TRAN vph_hi AVG V(out) FROM=0.00508864789 TO=0.00591135211
 .backanno
 .end
