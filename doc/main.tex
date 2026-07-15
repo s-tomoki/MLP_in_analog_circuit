@@ -1,0 +1,83 @@
+\documentclass[book,paper=a4,fontsize=10.5pt]{jlreq} % 日本語の標準クラス
+
+% --- パッケージの読み込み ---
+\usepackage{luatexja} % LuaLaTeXで日本語を扱う
+\usepackage{amsmath,amssymb} % 高度な数式用
+\usepackage{graphicx} % 画像挿入用
+\usepackage{circuitikz} % 電子回路描画用
+\usepackage{tikz} % ニューラルネットなどの図作用
+\usepackage[most]{tcolorbox} % おしゃれな注意書きボックス用
+
+% --- カスタム環境の設定（実験の注意・ポイント用） ---
+\newtcolorbox{cautionbox}[1]{
+  colback=red!5!white,
+  colframe=red!75!black,
+  fonttitle=\bfseries,
+  title=#1,
+  arc=4mm
+}
+\newtcolorbox{pointbox}[1]{
+  colback=blue!5!white,
+  colframe=blue!75!black,
+  fonttitle=\bfseries,
+  title=#1,
+  arc=4mm
+}
+
+\title{電子回路による人工ニューラルネットワークの実装 \\
+情報工学実験I/II 個別テーマ指導書 \\
+\rule{0.8\textwidth}{1pt}}
+\author{杉浦 友紀 \\
+人間情報学講座　知能化ライフサポート研究室　助教}
+\date{}
+
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{ニューラルネットワークの電子回路実装}
+
+\section{実験の目的}
+本実験では、オペアンプを用いた加算回路により、簡易的な人工ニューロン（パーセプトロン）を構成し、その動作を検証します。
+
+ニューロンの基本式は、入力 $x_i$ と重み $w_i$、バイアス $b$ を用いて以下のように表されます。
+$$y = f\left( \sum_{i=1}^{n} w_i x_i + b \right)$$
+
+\begin{cautionbox}{警告：電源の接続について}
+    オペアンプのプラス電源（$V_{CC}$）とマイナス電源（$V_{EE}$）を逆に接続すると、素子が破損し発熱する恐れがあります。電源を入れる前に必ず配線を確認してください。
+\end{cautionbox}
+
+\section{実験回路}
+以下の回路図をブレッドボード上に構成してください。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{circuitikz} \draw
+    (0,0) node[op amp] (opamp) {}
+    (opamp.-) to[R, l_=$R_1$] (-3,0.5) node[left] {$v_{in}$}
+    (opamp.-) -- (-1.2, 0.5) -- (-1.2, 1.5) to[R, l=$R_f$] (1.2,1.5) -- (1.2, 0) -- (opamp.out)
+    (opamp.+) node[ground] {}
+    (opamp.out) -- (2,0) node[right] {$v_{out}$}
+    ;
+  \end{circuitikz}
+  \caption{反転増幅回路による基本構成}
+\end{figure}
+
+\include{src/preface.tex}
+
+\include{src/chap1_neuron/artificial_neuron.tex}
+\include{src/chap2_learning/learning.tex}
+\include{src/chap3_opamp/opamp.tex}
+\include{src/chap4_mlp_sw/mlp_in_software.tex}
+\include{src/chap5_mlp_hw/mlp_in_hardware.tex}
+\include{src/chap6_extra/extra.tex}
+
+\appendix
+\include{src/appendix/appendix.tex}
+
+\include{src/copyright.tex}
+
+\end{document}
