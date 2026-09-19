@@ -69,8 +69,8 @@ python3 main.py --seed 1 --l2 --l2-lambda 0.001
 
 最小単位のニューロン。1 個のニューロンが持つ重み・バイアスと、活性化/逆伝播の計算を担当します。
 
-- `__init__`: `activation`(`"relu"` または `"sigmoid"`)に応じて重み初期化を切り替える (ReLU は He 初期化
-  `scale=sqrt(2/num_inputs)`、Sigmoid は Xavier 初期化 `scale=sqrt(1/num_inputs)`)。
+- `__init__`: 重みは単純な標準正規分布 `N(0, 1)` で初期化します(He/Xavier 初期化は不採用。理由は
+  [5. 補足: 重み初期化(He/Xavier)について](#5-補足-重み初期化heXavierについて) を参照)。
   `rng`(`np.random.Generator`)を外部から注入できるようにしており、`NeuralNetwork` にシードを渡すことで
   再現性のある比較ができます。
 - `activate`: 入力の重み付き和(`self.sum`)を計算し、`self.activation` に応じて ReLU または Sigmoid を
@@ -107,3 +107,20 @@ python3 main.py --seed 1 --l2 --l2-lambda 0.001
 コマンドライン引数から指定できるようにし、`NeuralNetwork` を構築・学習させた上で、決定境界と学習曲線 (MSE)を 1 つの図にまとめて
 `xor_result_<run_name>.png` に保存します。図の上部には使用した `activation` / `l2_lambda` / `seed` / `lr`
 / `epochs` / `accuracy` を併記し、画像だけで実行条件と 結果が分かるようにしています。
+
+## 5. 補足: 重み初期化(He/Xavier)について
+
+ディープラーニングの教科書的な初期化手法として、ReLU 向けの **He 初期化** (`scale = sqrt(2 / fan_in)`)や、Sigmoid/tanh
+向けの **Xavier(Glorot)初期化**
+(`scale = sqrt(1 / fan_in)`)がよく紹介されます。目的は、層を経るごとに活性化前の値(重み付き和)の
+分散が発散したり消失したりしないよう、重みのスケールを入力数(fan-in)に応じて調整することです。
+
+このリポジトリでは検証の結果、**あえて採用していません**。理由は**このネットワーク構成では効果が出ない**ためです。 `main.py` のデフォルト構成
+`[2, 2, 1]` は、 どの層も fan-in が 2 です。He 初期化のスケールは `sqrt(2/2) = 1.0` となり、 単純な標準正規分布
+`N(0, 1)`(スケール 1)と数式上完全に一致してしまいます。 つまり、このネットワークで He 初期化を実装しても、単純な初期化と全く同じ結果にしかなりません。
+
+`neuron.py` の重み初期化は常に単純な `N(0, 1)` としています。He/Xavier 初期化を試したい場合は、`Neuron.__init__` の
+`self.weights = rng.normal(size=num_inputs)` の行を
+`self.weights = rng.normal(scale=(2 / num_inputs) ** 0.5, size=num_inputs)`(He、ReLU 向け)や
+`self.weights = rng.normal(scale=(1 / num_inputs) ** 0.5, size=num_inputs)`(Xavier、Sigmoid
+向け) に差し替えることで再現できます。

@@ -4,15 +4,11 @@ import numpy as np
 class Neuron:
     def __init__(self, num_inputs, rng=None, activation="relu"):
         rng = rng if rng is not None else np.random.default_rng()
-        self.activation = activation
-        if activation == "relu":
-            # He initialization (suited for ReLU activations)
-            self.weights = rng.normal(scale=(2 / num_inputs) ** 0.5, size=num_inputs)
-        elif activation == "sigmoid":
-            # Xavier/Glorot initialization (suited for sigmoid activations)
-            self.weights = rng.normal(scale=(1 / num_inputs) ** 0.5, size=num_inputs)
-        else:
+        if activation not in ("relu", "sigmoid"):
             raise ValueError(f"Unknown activation: {activation}")
+        self.activation = activation
+        # Plain N(0, 1) init. He/Xavier scaling was tried and dropped; see README.
+        self.weights = rng.normal(size=num_inputs)
         self.bias = rng.uniform()
 
     def activate(self, inputs):
