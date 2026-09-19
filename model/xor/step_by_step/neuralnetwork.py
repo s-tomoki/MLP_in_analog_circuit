@@ -3,14 +3,19 @@ from layer import Layer
 
 
 class NeuralNetwork:
-    def __init__(self, layers, learning_rate=0.1, epochs=10_000, l2_lambda=0.0, seed=None):
+    def __init__(
+        self, layers, learning_rate=0.1, epochs=10_000, l2_lambda=0.0, seed=None, activation="relu"
+    ):
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.l2_lambda = l2_lambda
         self.loss_history = []
 
         rng = np.random.default_rng(seed)
-        self.layers = [Layer(layers[i + 1], layers[i], rng=rng) for i in range(len(layers) - 1)]
+        self.layers = [
+            Layer(layers[i + 1], layers[i], rng=rng, activation=activation)
+            for i in range(len(layers) - 1)
+        ]
 
     def train(self, inputs, outputs, verbose=True):
         for epoch in range(self.epochs):

@@ -18,6 +18,12 @@ def parse_args():
         default=0.001,
         help="L2 regularization strength, used only when --l2 is set (default: 0.001).",
     )
+    parser.add_argument(
+        "--activation",
+        choices=["relu", "sigmoid"],
+        default="relu",
+        help="Activation function used by every neuron (default: relu).",
+    )
     parser.add_argument("--epochs", type=int, default=50_000)
     parser.add_argument("--learning-rate", type=float, default=0.01)
     parser.add_argument(
@@ -32,14 +38,21 @@ def parse_args():
 def main():
     args = parse_args()
     l2_lambda = args.l2_lambda if args.l2 else 0.0
-    run_name = f"l2_{args.l2_lambda}" if args.l2 else "no_l2"
+    run_name = f"{args.activation}_" + (f"l2_{args.l2_lambda}" if args.l2 else "no_l2")
 
     inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     outputs = np.array([[0], [1], [1], [0]])
 
     layers = [2, 2, 1]
-    nn = NeuralNetwork(layers, args.learning_rate, args.epochs, l2_lambda=l2_lambda, seed=args.seed)
-    print(f"Training with l2_lambda={l2_lambda} (run: {run_name})")
+    nn = NeuralNetwork(
+        layers,
+        args.learning_rate,
+        args.epochs,
+        l2_lambda=l2_lambda,
+        seed=args.seed,
+        activation=args.activation,
+    )
+    print(f"Training with activation={args.activation}, l2_lambda={l2_lambda} (run: {run_name})")
     nn.train(inputs, outputs)
 
     predicted_output = np.array([nn.predict(x) for x in inputs])
@@ -50,6 +63,7 @@ def main():
 
     # Round the predicted output to get binary predictions
     predicted_output_binary = np.round(predicted_output)
+    accuracy = np.mean(predicted_output_binary.ravel() == outputs.ravel())
 
     # Plot the decision boundary
     x_min, x_max = inputs[:, 0].min() - 0.5, inputs[:, 0].max() + 0.5
@@ -72,12 +86,15 @@ def main():
     ax_loss.set_ylabel("MSE")
     ax_loss.set_yscale("log")
 
-    fig.tight_layout()
+    param_text = (
+        f"activation={args.activation}  l2_lambda={l2_lambda}  seed={args.seed}  "
+        f"lr={args.learning_rate}  epochs={args.epochs}  accuracy={accuracy:.2f}"
+    )
+    fig.suptitle(param_text, fontsize=9)
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(f"xor_result_{run_name}.png")
     plt.show()
 
-    # Print the accuracy
-    accuracy = np.mean(predicted_output_binary.ravel() == outputs.ravel())
     print("Accuracy:", accuracy)
 
 
