@@ -2,15 +2,14 @@ import numpy as np
 
 
 class Neuron:
-    def __init__(self, num_inputs):
-        # self.weights = np.random.uniform(size=num_inputs)
-        self.weights = np.random.normal(size=num_inputs, scale=(2 / num_inputs) ** 0.5)
-        self.weights = np.random.normal(size=num_inputs)
-        self.bias = np.random.uniform()
+    def __init__(self, num_inputs, rng=None):
+        rng = rng if rng is not None else np.random.default_rng()
+        # He initialization (suited for ReLU activations)
+        self.weights = rng.normal(scale=(2 / num_inputs) ** 0.5, size=num_inputs)
+        self.bias = rng.uniform()
 
     def activate(self, inputs):
         self.inputs = inputs
-        # self.output = self.sigmoid(np.dot(inputs, self.weights) + self.bias)
         self.sum = np.dot(inputs, self.weights) + self.bias
         self.output = self.relu(self.sum)
         return self.output
@@ -22,17 +21,12 @@ class Neuron:
         return self.output * (1 - self.output)
 
     def relu(self, x):
-        if x > 0:
-            return x
-        else:
-            return 0
+        return x if x > 0 else 0
 
     def relu_derivative(self):
-        if self.sum > 0:
-            return 1
-        else:
-            return 0
+        return 1 if self.sum > 0 else 0
 
-    def update_weights(self, delta, learning_rate):
-        self.weights += learning_rate * delta * self.inputs
+    def update_weights(self, delta, learning_rate, l2_lambda=0.0):
+        # Gradient step on the error term, plus L2 weight decay (bias is not regularized).
+        self.weights += learning_rate * (delta * self.inputs - l2_lambda * self.weights)
         self.bias += learning_rate * delta
