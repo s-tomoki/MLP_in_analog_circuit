@@ -39,7 +39,11 @@ python3 main.py --classes 0 1 2 --hidden 8 --epochs 100 --batch-size 32 --learni
 実行すると、標準出力に学習経過(MSE)・ train/test accuracy ・混同行列が表示され、次のファイルが保存されます (`<run_name>` は
 `クラス_層構造`、例 `01_49-2-2`)。
 
-- `weights_<run_name>.npz`: 重み(`w0`, `b0`, `w1`, `b1`, ... と `layers`, `classes`)
+- `weights_<run_name>/`: 重み。`mlp_in_keras/trainer.py` の `save_model_weights` と同じ形式です。
+  - `layer_{i}_weights.csv`: 形状 (入力数, ニューロン数)。行が入力、列がニューロン(`i` は 0 始まり)
+  - `layer_{i}_bias.csv`: 1 列、ニューロン数の行
+  - `model_weights.npz`: 上記と同じ `layer_{i}_weights` / `layer_{i}_bias` に加えて `layers`,
+    `classes`
 - `loss_<run_name>.png`: 学習曲線(MSE, 対数軸)
 
 ## 2. 設計上のポイント

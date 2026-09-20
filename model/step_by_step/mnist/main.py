@@ -108,6 +108,22 @@ def evaluate(nn, x, y, num_classes):
     return float(np.mean(pred == y)), cm
 
 
+def save_weights(nn, dirname, layers, classes):
+    """Save weights in the same layout as mlp_in_keras/trainer.py (save_model_weights).
+
+    layer_{i}_weights: (n_in, n_out), rows=inputs / cols=neurons; layer_{i}_bias: (n_out, 1).
+    """
+    dirname.mkdir(exist_ok=True)
+    arrays = {}
+    for i, layer_w in enumerate(nn.weights()):
+        arrays[f"layer_{i}_weights"] = np.array([w for w, _ in layer_w]).T
+        arrays[f"layer_{i}_bias"] = np.array([b for _, b in layer_w])
+    np.savez(dirname / "model_weights.npz", layers=np.array(layers), classes=classes, **arrays)
+    for key, value in arrays.items():
+        np.savetxt(dirname / f"{key}.csv", value.reshape(value.shape[0], -1), delimiter=",")
+    print(f"Weights saved to {dirname}/ (model_weights.npz, layer_*_weights.csv, layer_*_bias.csv)")
+
+
 def main():
     args = parse_args()
     l2_lambda = args.l2_lambda if args.l2 else 0.0
@@ -140,15 +156,8 @@ def main():
     print(f"Train accuracy: {train_acc:.4f}  Test accuracy: {test_acc:.4f}")
     print("Confusion matrix (rows=true, cols=pred; last col=undecided):\n", cm)
 
-    # Save weights (npz): w0, b0, w1, b1, ...
-    arrays = {}
-    for i, layer_w in enumerate(nn.weights()):
-        arrays[f"w{i}"] = np.array([w for w, _ in layer_w])
-        arrays[f"b{i}"] = np.array([b for _, b in layer_w])
     out_dir = Path(__file__).resolve().parent
-    np.savez(
-        out_dir / f"weights_{run_name}.npz", layers=np.array(layers), classes=classes, **arrays
-    )
+    save_weights(nn, out_dir / f"weights_{run_name}", layers, classes)
 
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot(nn.loss_history)
