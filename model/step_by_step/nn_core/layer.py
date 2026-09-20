@@ -1,5 +1,6 @@
 import numpy as np
-from neuron import Neuron
+
+from .neuron import Neuron
 
 
 class Layer:

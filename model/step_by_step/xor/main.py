@@ -1,8 +1,13 @@
 import argparse
+import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from neuralnetwork import NeuralNetwork
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from nn_core import NeuralNetwork  # noqa: E402
 
 
 def parse_args():

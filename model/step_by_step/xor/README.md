@@ -65,7 +65,7 @@ python3 main.py --seed 1 --l2 --l2-lambda 0.001
 
 ## 3. 各コードの解説
 
-### [`neuron.py`](neuron.py) — `Neuron`
+### [`neuron.py`](../nn_core/neuron.py) — `Neuron`
 
 最小単位のニューロン。1 個のニューロンが持つ重み・バイアスと、活性化/逆伝播の計算を担当します。
 
@@ -81,7 +81,7 @@ python3 main.py --seed 1 --l2 --l2-lambda 0.001
 - `update_weights`: 誤差項(`delta * self.inputs`)による勾配降下ステップに加えて、L2 weight decay
   (`- l2_lambda * self.weights`)を適用します。バイアスは正則化の対象外です。
 
-### [`layer.py`](layer.py) — `Layer`
+### [`layer.py`](../nn_core/layer.py) — `Layer`
 
 同じ層に属する `Neuron` をまとめて扱うクラス。
 
@@ -90,7 +90,7 @@ python3 main.py --seed 1 --l2 --l2-lambda 0.001
   つ前の層に伝える誤差(重みの転置 × デルタ)を計算して返す — これが誤差逆伝播法の核となる処理です。
 - `weights`: 各ニューロンの `(weights, bias)` タプルのリストを返す(デバッグ・結果確認用)。
 
-### [`neuralnetwork.py`](neuralnetwork.py) — `NeuralNetwork`
+### [`neuralnetwork.py`](../nn_core/neuralnetwork.py) — `NeuralNetwork`
 
 複数の `Layer` を束ねて、学習・推論のループを管理するクラス。
 
@@ -119,8 +119,8 @@ python3 main.py --seed 1 --l2 --l2-lambda 0.001
 `[2, 2, 1]` は、 どの層も fan-in が 2 です。He 初期化のスケールは `sqrt(2/2) = 1.0` となり、 単純な標準正規分布
 `N(0, 1)`(スケール 1)と数式上完全に一致してしまいます。 つまり、このネットワークで He 初期化を実装しても、単純な初期化と全く同じ結果にしかなりません。
 
-`neuron.py` の重み初期化は常に単純な `N(0, 1)` としています。He/Xavier 初期化を試したい場合は、`Neuron.__init__` の
-`self.weights = rng.normal(size=num_inputs)` の行を
+`nn_core/neuron.py` の重み初期化は常に単純な `N(0, 1)` としています。He/Xavier
+初期化を試したい場合は、`Neuron.__init__` の `self.weights = rng.normal(size=num_inputs)` の行を
 `self.weights = rng.normal(scale=(2 / num_inputs) ** 0.5, size=num_inputs)`(He、ReLU 向け)や
 `self.weights = rng.normal(scale=(1 / num_inputs) ** 0.5, size=num_inputs)`(Xavier、Sigmoid
 向け) に差し替えることで再現できます。
