@@ -7,7 +7,7 @@
 ## 1. 使い方 (Usage)
 
 ```bash
-# 依存パッケージ(データ取得に tensorflow を使用)
+# 依存パッケージ(tensorflow は初回のデータ取得時のみ使用。データは ./data/mnist.npz にキャッシュされ、2 回目以降は読み込まない)
 pip install numpy matplotlib tensorflow
 
 # デフォルト: 0/1 の2クラス、層構造 [49, 2, 2]

@@ -57,10 +57,30 @@ def parse_args():
     return args
 
 
-def load_data(classes):
-    from tensorflow.keras.datasets import mnist
+CACHE = Path(__file__).resolve().parent / "data" / "mnist.npz"
+KERAS_CACHE = Path.home() / ".keras" / "datasets" / "mnist.npz"
 
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+def load_mnist():
+    """Load raw MNIST, caching it under ./data so the slow tensorflow import is skipped."""
+    if not CACHE.exists():
+        CACHE.parent.mkdir(exist_ok=True)
+        if KERAS_CACHE.exists():
+            # Keras' own cache is a plain npz; copy it without importing tensorflow.
+            CACHE.write_bytes(KERAS_CACHE.read_bytes())
+        else:
+            from tensorflow.keras.datasets import mnist
+
+            (x_train, y_train), (x_test, y_test) = mnist.load_data()
+            np.savez_compressed(
+                CACHE, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test
+            )
+    with np.load(CACHE) as d:
+        return (d["x_train"], d["y_train"]), (d["x_test"], d["y_test"])
+
+
+def load_data(classes):
+    (x_train, y_train), (x_test, y_test) = load_mnist()
     cvt = Converter()
     x_train, x_test = cvt.pooling_4x4(x_train, x_test)
     x_train, x_test = cvt.binarize(x_train, x_test)
