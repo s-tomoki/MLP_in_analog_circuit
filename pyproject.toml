@@ -38,6 +38,11 @@ extend-ignore = [
 # docstringはgoogle style
 convention = "google"
 
+[tool.mypy]
+# モジュール名をリポジトリルートからのパスで決める。
+# ex1/ と ex1_answer/ のように同名の src/・nn_core/・conftest.py が複数あっても衝突しない。
+explicit_package_bases = true
+
 [tool.ruff.per-file-ignores]
 # 個別設定
 # __init__.pyは未使用インポートを許容
