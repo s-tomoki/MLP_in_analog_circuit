@@ -147,9 +147,6 @@ MNIST を 7x7 に縮小・ 2 値化したテストベクタを、ドットマト
 
 #### テストベクタ (CSV)
 
-テストベクタは `model/step_by_step/mnist/export_test_vectors.py` で生成します。`test_vectors/` はその出力先
-`model/step_by_step/mnist/test_vectors/` へのシンボリックリンクです。
-
 - ファイル名は `<split>_<class>.csv`（例: `train_0.csv` は学習データのクラス 0）です。
 - ヘッダなし、1 行が 1 ベクタで、49 列の 0/1 が並びます。k 列目は画素 (行, 列) = (k // 7, k % 7) です。
 - ドットマトリックスには左上 7x7 に表示し、8 行目と 8 列目は常に消灯します。
