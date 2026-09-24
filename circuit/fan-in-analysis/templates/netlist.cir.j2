@@ -1,20 +1,26 @@
 {#-
-  Fan-in summing amplifier netlist template.
-
-  Used for BOTH:
-    - "full" netlists: all 2N+2 test phases in one .tran run
-    - "phase" netlists: a single test phase, for parallel job-splitting
+  Fan-in summing amplifier netlist template. Single-phase only (see
+  gen_fanin_netlist.py) -- generated for parallel job-splitting via
+  run_fanin_batch.sh.
 
   All PWL/measurement string construction happens in Python (gen_fanin_netlist.py)
   -- this template only arranges the already-formatted pieces into the final
   .cir document. Keeping the procedural PWL-breakpoint / settle-time logic in
   Python (rather than forcing it into Jinja expressions) keeps that logic
   testable and avoids an unreadable template.
+
+  .options threads=1: when many LTspice instances are run in parallel
+  (e.g. via `xargs -P`), LTspice's automatic per-run thread-count benchmarking
+  causes severe oversubscription/contention (confirmed via LTspice's own
+  EngineerZone forum, and empirically: wall-clock time for the same batch
+  dropped ~6x after adding this). Parallelism should be controlled entirely
+  by the OS-level job scheduler (xargs -P), not by LTspice's own threading.
 -#}
 * Fan-in summing amplifier, N={{ n }}, mode={{ mode }} (phase-only: {{ phase }})
 
 * scale_mode={{ scale_mode }} Rf0={{ rf0 }} Rin0={{ rin0 }} -> Rf={{ rf }} Rin={{ rin }}
 * preset note: {{ preset_note }}
+.options threads=1
 .include {{ opamp_lib }}
 
 .subckt MyOpAmp 1 2 3 4 5

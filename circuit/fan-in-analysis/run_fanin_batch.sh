@@ -34,16 +34,16 @@ set -uo pipefail
 LTSPICE_EXE="/mnt/c/Users/sugiu/AppData/Local/Programs/ADI/LTspice/LTspice.exe"
 
 # 並列実行数。デフォルト8(WSLの `nproc` 値以下を推奨)。
-PARALLEL_JOBS=4
+PARALLEL_JOBS=8
 
 # ネットリスト生成・解析の対象
-N_LIST="4"                 # カンマ区切り。gen_fanin_netlist.py --n-list にそのまま渡す
+N_LIST="4,8,16,32"                 # カンマ区切り。gen_fanin_netlist.py --n-list にそのまま渡す
 PRESETS=("mcp6232" "njm2732d")  # 対象IC
 SCALE_MODE="rin_scale"          # rin_scale または rf_scale
 RF0="10e3"
 RIN0="10e3"
 TOL="0.05"
-MC_RUNS="100"
+MC_RUNS="500"
 VHI="1.0"
 VLO="-1.0"
 FAIL_THRESHOLD_PCT="5.0"
@@ -58,130 +58,130 @@ JOBLIST="${SCRIPT_DIR}/.joblist.txt"
 # ============================================================
 # 事前チェック
 # ============================================================
-
-if [[ -z "$LTSPICE_EXE" ]]; then
-    echo "ERROR: LTSPICE_EXE が未設定です。スクリプト冒頭のCONFIGセクションで" >&2
-    echo "       Windows側LTspice実行ファイルのパス(WSL形式 /mnt/c/...)を設定してください。" >&2
-    exit 1
-fi
-if [[ ! -f "$LTSPICE_EXE" ]]; then
-    echo "ERROR: LTSPICE_EXE で指定したファイルが見つかりません: $LTSPICE_EXE" >&2
-    exit 1
-fi
-for cmd in wslpath xargs python3; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-        echo "ERROR: ${cmd} コマンドが見つかりません。" >&2
-        exit 1
-    fi
-done
-if ! python3 -c "import jinja2" >/dev/null 2>&1; then
-    echo "ERROR: jinja2 がインストールされていません。" >&2
-    echo "       pip install jinja2 --break-system-packages を実行してください。" >&2
-    exit 1
-fi
-
-mkdir -p "$WORKDIR" "$ZIPDIR" "$SUMMARY_DIR"
-echo "label,elapsed_sec" > "$TIMING_LOG"
-
-# ============================================================
-# 1. ネットリスト生成 (フェーズ単位分割, --all-phases)
-#    出力先: out_phases/<preset>/N<n>/*.cir
-# ============================================================
-
-echo "=== [1/4] ネットリスト生成 (N=${N_LIST}, scale_mode=${SCALE_MODE}, フェーズ分割) ==="
-for preset in "${PRESETS[@]}"; do
-    python3 "${SCRIPT_DIR}/gen_fanin_netlist.py" \
-        --n-list "$N_LIST" \
-        --preset "$preset" \
-        --mode mc_res \
-        --scale-mode "$SCALE_MODE" \
-        --rf0 "$RF0" --rin0 "$RIN0" \
-        --tol "$TOL" --mc-runs "$MC_RUNS" \
-        --vhi "$VHI" --vlo "$VLO" \
-        --all-phases \
-        --outdir "$WORKDIR"
-done
-
-find "$WORKDIR" -name "*.cir" | sort > "$JOBLIST"
-n_jobs=$(wc -l < "$JOBLIST")
-echo "生成ジョブ数: ${n_jobs}"
-
-# ============================================================
-# 2. LTspiceバッチ実行 (xargs -P で並列化)
-#    各ジョブ完了後、.raw(波形データ、未使用)は即削除する
-# ============================================================
-
-echo "=== [2/4] LTspiceバッチ実行 (並列数=${PARALLEL_JOBS}) ==="
-
-run_one_job() {
-    local cir_path="$1"
-    local base
-    base="$(basename "$cir_path" .cir)"
-    local dir
-    dir="$(dirname "$cir_path")"
-    local log_path="${dir}/${base}.log"
-    local raw_path="${dir}/${base}.raw"
-    local win_cir_path
-    win_cir_path="$(wslpath -w "$cir_path")"
-
-    local start_ts end_ts elapsed
-    start_ts=$(date +%s)
-    "$LTSPICE_EXE" -b "$win_cir_path" >/dev/null 2>&1
-    local rc=$?
-    end_ts=$(date +%s)
-    elapsed=$((end_ts - start_ts))
-
-    # .raw(波形データ)は今回使わないので容量削減のため即削除
-    rm -f "$raw_path"
-
-    if [[ $rc -ne 0 ]]; then
-        echo "FAILED (${elapsed}s): ${base}" >&2
-    elif [[ ! -f "$log_path" ]]; then
-        echo "NO LOG (${elapsed}s): ${base}" >&2
-    else
-        echo "ok (${elapsed}s): ${base}"
-    fi
-    echo "${base},${elapsed}" >> "${TIMING_LOG}"
-}
-export -f run_one_job
-export LTSPICE_EXE TIMING_LOG
-
-start_all=$(date +%s)
-cat "$JOBLIST" | xargs -P "$PARALLEL_JOBS" -I{} bash -c 'run_one_job "$@"' _ {}
-end_all=$(date +%s)
-echo "全ジョブ実行時間(壁時計): $((end_all - start_all)) 秒"
-
-# ============================================================
-# 3. preset x N 単位で .cir + .log を1つのzipにまとめ、
-#    展開済みファイル(ディレクトリ)は削除する
-# ============================================================
-
-echo "=== [3/4] zip化 (preset x N 単位) ==="
+# 
+# if [[ -z "$LTSPICE_EXE" ]]; then
+#     echo "ERROR: LTSPICE_EXE が未設定です。スクリプト冒頭のCONFIGセクションで" >&2
+#     echo "       Windows側LTspice実行ファイルのパス(WSL形式 /mnt/c/...)を設定してください。" >&2
+#     exit 1
+# fi
+# if [[ ! -f "$LTSPICE_EXE" ]]; then
+#     echo "ERROR: LTSPICE_EXE で指定したファイルが見つかりません: $LTSPICE_EXE" >&2
+#     exit 1
+# fi
+# for cmd in wslpath xargs python3; do
+#     if ! command -v "$cmd" >/dev/null 2>&1; then
+#         echo "ERROR: ${cmd} コマンドが見つかりません。" >&2
+#         exit 1
+#     fi
+# done
+# if ! python3 -c "import jinja2" >/dev/null 2>&1; then
+#     echo "ERROR: jinja2 がインストールされていません。" >&2
+#     echo "       pip install jinja2 --break-system-packages を実行してください。" >&2
+#     exit 1
+# fi
+# 
+# mkdir -p "$WORKDIR" "$ZIPDIR" "$SUMMARY_DIR"
+# echo "label,elapsed_sec" > "$TIMING_LOG"
+# 
+# # ============================================================
+# # 1. ネットリスト生成 (フェーズ単位分割, --all-phases)
+# #    出力先: out_phases/<preset>/N<n>/*.cir
+# # ============================================================
+# 
+# echo "=== [1/4] ネットリスト生成 (N=${N_LIST}, scale_mode=${SCALE_MODE}, フェーズ分割) ==="
+# for preset in "${PRESETS[@]}"; do
+#     python3 "${SCRIPT_DIR}/gen_fanin_netlist.py" \
+#         --n-list "$N_LIST" \
+#         --preset "$preset" \
+#         --mode mc_res \
+#         --scale-mode "$SCALE_MODE" \
+#         --rf0 "$RF0" --rin0 "$RIN0" \
+#         --tol "$TOL" --mc-runs "$MC_RUNS" \
+#         --vhi "$VHI" --vlo "$VLO" \
+#         --all-phases \
+#         --outdir "$WORKDIR"
+# done
+# 
+# find "$WORKDIR" -name "*.cir" | sort > "$JOBLIST"
+# n_jobs=$(wc -l < "$JOBLIST")
+# echo "生成ジョブ数: ${n_jobs}"
+# 
+# # ============================================================
+# # 2. LTspiceバッチ実行 (xargs -P で並列化)
+# #    各ジョブ完了後、.raw(波形データ、未使用)は即削除する
+# # ============================================================
+# 
+# echo "=== [2/4] LTspiceバッチ実行 (並列数=${PARALLEL_JOBS}) ==="
+# 
+# run_one_job() {
+#     local cir_path="$1"
+#     local base
+#     base="$(basename "$cir_path" .cir)"
+#     local dir
+#     dir="$(dirname "$cir_path")"
+#     local log_path="${dir}/${base}.log"
+#     local raw_path="${dir}/${base}.raw"
+#     local win_cir_path
+#     win_cir_path="$(wslpath -w "$cir_path")"
+# 
+#     local start_ts end_ts elapsed
+#     start_ts=$(date +%s)
+#     "$LTSPICE_EXE" -b "$win_cir_path" >/dev/null 2>&1
+#     local rc=$?
+#     end_ts=$(date +%s)
+#     elapsed=$((end_ts - start_ts))
+# 
+#     # .raw(波形データ)は今回使わないので容量削減のため即削除
+#     rm -f "$raw_path"
+# 
+#     if [[ $rc -ne 0 ]]; then
+#         echo "FAILED (${elapsed}s): ${base}" >&2
+#     elif [[ ! -f "$log_path" ]]; then
+#         echo "NO LOG (${elapsed}s): ${base}" >&2
+#     else
+#         echo "ok (${elapsed}s): ${base}"
+#     fi
+#     echo "${base},${elapsed}" >> "${TIMING_LOG}"
+# }
+# export -f run_one_job
+# export LTSPICE_EXE TIMING_LOG
+# 
+# start_all=$(date +%s)
+# cat "$JOBLIST" | xargs -P "$PARALLEL_JOBS" -I{} bash -c 'run_one_job "$@"' _ {}
+# end_all=$(date +%s)
+# echo "全ジョブ実行時間(壁時計): $((end_all - start_all)) 秒"
+# 
+# # ============================================================
+# # 3. preset x N 単位で .cir + .log を1つのzipにまとめ、
+# #    展開済みファイル(ディレクトリ)は削除する
+# # ============================================================
+# 
+# echo "=== [3/4] zip化 (preset x N 単位) ==="
 IFS=',' read -ra N_ARRAY <<< "$N_LIST"
-
-for preset in "${PRESETS[@]}"; do
-    for n in "${N_ARRAY[@]}"; do
-        n_dir="${WORKDIR}/${preset}/N${n}"
-        [[ -d "$n_dir" ]] || continue
-        zip_path="${ZIPDIR}/${preset}_N${n}.zip"
-
-        python3 - "$n_dir" "$zip_path" << 'PYEOF'
-import sys, os, glob, zipfile
-d, zpath = sys.argv[1], sys.argv[2]
-files = sorted(glob.glob(os.path.join(d, "*.cir")) + glob.glob(os.path.join(d, "*.log")))
-with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as zf:
-    for f in files:
-        zf.write(f, os.path.basename(f))
-print(f"zipped {len(files)} files -> {zpath}")
-PYEOF
-
-        rm -rf "$n_dir"
-    done
-done
-
-# out_phases 配下が空になった preset ディレクトリも掃除
-find "$WORKDIR" -type d -empty -delete 2>/dev/null || true
-
+# 
+# for preset in "${PRESETS[@]}"; do
+#     for n in "${N_ARRAY[@]}"; do
+#         n_dir="${WORKDIR}/${preset}/N${n}"
+#         [[ -d "$n_dir" ]] || continue
+#         zip_path="${ZIPDIR}/${preset}_N${n}.zip"
+# 
+#         python3 - "$n_dir" "$zip_path" << 'PYEOF'
+# import sys, os, glob, zipfile
+# d, zpath = sys.argv[1], sys.argv[2]
+# files = sorted(glob.glob(os.path.join(d, "*.cir")) + glob.glob(os.path.join(d, "*.log")))
+# with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as zf:
+#     for f in files:
+#         zf.write(f, os.path.basename(f))
+# print(f"zipped {len(files)} files -> {zpath}")
+# PYEOF
+# 
+#         rm -rf "$n_dir"
+#     done
+# done
+# 
+# # out_phases 配下が空になった preset ディレクトリも掃除
+# find "$WORKDIR" -type d -empty -delete 2>/dev/null || true
+# 
 # ============================================================
 # 4. 解析 (mc_res_analyze.py はzipを直接読める)
 # ============================================================

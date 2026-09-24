@@ -47,4 +47,6 @@ explicit_package_bases = true
 # 個別設定
 # __init__.pyは未使用インポートを許容
 "__init__.py" = ["F401"]
+# 演習の穴埋め版は、学生が使う予定の import を未使用のまま残すため許容
+"model/step_by_step/exercises/**/*.py" = ["F401"]
 
